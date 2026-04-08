@@ -90,4 +90,538 @@
             Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
             Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
             Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-            Trash: () => <svg xmlns="http://www
+            Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        };
+
+        // --- COMPONENTS ---
+        const ScoreChart = ({ history, targetScore }) => {
+            if (!history || history.length < 2) return (
+                <div className="flex flex-col items-center justify-center h-32 bg-gray-50 rounded-lg border border-dashed border-gray-200 text-gray-400 text-xs">
+                    <Icons.Trophy />
+                    <span className="mt-2">บันทึกคะแนนอย่างน้อย 2 ครั้งเพื่อดูกราฟแนวโน้ม</span>
+                </div>
+            );
+
+            const height = 120;
+            const width = 500;
+            const padding = 20;
+            const maxScore = 100;
+            const xStep = (width - padding * 2) / (history.length - 1);
+            
+            const points = history.map((entry, index) => {
+                const x = padding + index * xStep;
+                const y = height - padding - (entry.score / maxScore) * (height - padding * 2);
+                return `${x},${y}`;
+            }).join(' ');
+
+            const targetY = height - padding - (targetScore / maxScore) * (height - padding * 2);
+
+            return (
+                <div className="w-full overflow-hidden mb-6">
+                    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full bg-white rounded-lg border border-gray-100 shadow-sm">
+                        <line x1={padding} y1={height-padding} x2={width-padding} y2={height-padding} stroke="#e5e7eb" strokeWidth="1" />
+                        <line x1={padding} y1={padding} x2={width-padding} y2={padding} stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4" />
+                        {targetScore > 0 && <line x1={padding} y1={targetY} x2={width-padding} y2={targetY} stroke="#10b981" strokeWidth="1" strokeDasharray="4" opacity="0.5" />}
+                        <polyline points={points} fill="none" stroke="#4f46e5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        {history.map((entry, index) => {
+                            const x = padding + index * xStep;
+                            const y = height - padding - (entry.score / maxScore) * (height - padding * 2);
+                            return (
+                                <g key={index}>
+                                    <circle cx={x} cy={y} r="4" fill="#fff" stroke="#4f46e5" strokeWidth="2" />
+                                    <text x={x} y={y - 10} textAnchor="middle" fontSize="10" fill="#6b7280">{entry.score}</text>
+                                    <text x={x} y={height - 5} textAnchor="middle" fontSize="8" fill="#9ca3af">{new Date(entry.date).toLocaleDateString('th-TH', {day:'numeric', month:'short'})}</text>
+                                </g>
+                            );
+                        })}
+                    </svg>
+                    <div className="flex justify-between text-[10px] text-gray-400 mt-1 px-2">
+                        <span>Start</span>
+                        <div className="flex items-center gap-2">
+                            <span className="flex items-center gap-1"><div className="w-2 h-0.5 bg-green-500"></div> Target ({targetScore})</span>
+                            <span className="flex items-center gap-1"><div className="w-2 h-0.5 bg-indigo-500"></div> Score</span>
+                        </div>
+                        <span>Latest</span>
+                    </div>
+                </div>
+            );
+        };
+
+        const SubjectModal = ({ subject, onClose, onUpdateTopic, onAddScore, onDeleteScore, onUpdateTarget }) => {
+            if (!subject) return null;
+            const [newScore, setNewScore] = React.useState('');
+            const [newDate, setNewDate] = React.useState(new Date().toISOString().split('T')[0]);
+
+            const handleAddScore = () => {
+                if (newScore === '') return;
+                onAddScore(subject.id, parseInt(newScore), newDate);
+                setNewScore('');
+            };
+
+            const latestScore = subject.scoreHistory && subject.scoreHistory.length > 0 
+                ? subject.scoreHistory[subject.scoreHistory.length - 1].score 
+                : 0;
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
+                    <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] shadow-2xl z-10 flex flex-col slide-up overflow-hidden">
+                        
+                        <div className={`p-6 ${subject.color} bg-opacity-10 border-b border-gray-100 flex justify-between items-start`}>
+                            <div className="flex gap-4">
+                                <div className={`p-3 rounded-xl ${subject.color} text-white shadow-sm`}>
+                                    {subject.icon === 'Target' ? <Icons.Target /> : subject.icon === 'Brain' ? <Icons.Brain /> : <Icons.Book />}
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-800">{subject.name}</h2>
+                                    <p className="text-sm text-gray-500 font-medium">Weight: {subject.weight}% • Progress: {subject.progress}%</p>
+                                </div>
+                            </div>
+                            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
+                                <Icons.Close />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+                            <div className="mb-8 bg-gray-50 rounded-xl p-5 border border-gray-100">
+                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                    <Icons.Trophy /> Test Performance & Trend
+                                </h3>
+
+                                <ScoreChart history={subject.scoreHistory} targetScore={subject.targetScore} />
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                        <label className="text-xs text-gray-500 mb-2 block font-bold">🎯 ตั้งเป้าหมาย (Target Score)</label>
+                                        <div className="flex items-center gap-2">
+                                            <input 
+                                                type="number" 
+                                                value={subject.targetScore || ''} 
+                                                onChange={(e) => onUpdateTarget(subject.id, e.target.value)}
+                                                className="w-full font-bold text-indigo-600 bg-gray-50 border border-gray-200 rounded p-2 focus:ring-1 focus:ring-indigo-500"
+                                                placeholder="60"
+                                            />
+                                            <span className="text-xs text-gray-400">/100</span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                        <label className="text-xs text-gray-500 mb-2 block font-bold">📝 เพิ่มคะแนนสอบใหม่ (New Test)</label>
+                                        <div className="flex gap-2">
+                                            <input 
+                                                type="date" 
+                                                value={newDate}
+                                                onChange={(e) => setNewDate(e.target.value)}
+                                                className="w-1/3 text-xs border border-gray-200 rounded p-2 bg-gray-50"
+                                            />
+                                            <input 
+                                                type="number" 
+                                                value={newScore}
+                                                onChange={(e) => setNewScore(e.target.value)}
+                                                className="w-1/3 text-sm border border-gray-200 rounded p-2 focus:ring-1 focus:ring-green-500"
+                                                placeholder="Score"
+                                            />
+                                            <button 
+                                                onClick={handleAddScore}
+                                                className="flex-1 bg-gray-800 text-white text-xs rounded hover:bg-gray-900 flex items-center justify-center gap-1"
+                                            >
+                                                <Icons.Plus /> Add
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="text-xs font-bold text-gray-400 mb-2">History Log</h4>
+                                    <div className="max-h-32 overflow-y-auto border border-gray-100 rounded-lg bg-white">
+                                        {(!subject.scoreHistory || subject.scoreHistory.length === 0) ? (
+                                            <div className="p-3 text-xs text-gray-400 text-center">ยังไม่มีประวัติการสอบ</div>
+                                        ) : (
+                                            <table className="w-full text-xs text-left">
+                                                <thead className="bg-gray-50 text-gray-500">
+                                                    <tr>
+                                                        <th className="p-2">Date</th>
+                                                        <th className="p-2">Score</th>
+                                                        <th className="p-2 text-right">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {[...subject.scoreHistory].reverse().map((entry, idx) => (
+                                                        <tr key={idx} className="border-t border-gray-50 hover:bg-gray-50">
+                                                            <td className="p-2 text-gray-600">{new Date(entry.date).toLocaleDateString('th-TH')}</td>
+                                                            <td className="p-2 font-bold text-gray-800">{entry.score}</td>
+                                                            <td className="p-2 text-right">
+                                                                <button 
+                                                                    onClick={() => onDeleteScore(subject.id, (subject.scoreHistory.length - 1) - idx)}
+                                                                    className="text-gray-300 hover:text-red-500"
+                                                                >
+                                                                    <Icons.Trash />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
+                                    Topic Checklist
+                                </h3>
+                                <div className="space-y-3">
+                                    {subject.topics.map((topic, index) => (
+                                        <label key={index} className="flex items-center p-3 rounded-lg border border-gray-100 hover:bg-gray-50 hover:border-gray-200 cursor-pointer transition-all group">
+                                            <div className="relative flex items-center">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={topic.completed} 
+                                                    onChange={() => onUpdateTopic(subject.id, index)}
+                                                    className="peer h-6 w-6 cursor-pointer appearance-none rounded-md border-2 border-gray-300 transition-all checked:border-green-500 checked:bg-green-500 hover:border-indigo-400"
+                                                />
+                                                <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100">
+                                                    <Icons.Check />
+                                                </div>
+                                            </div>
+                                            <span className={`ml-3 text-sm transition-colors ${topic.completed ? 'text-gray-400 line-through' : 'text-gray-700 font-medium'}`}>
+                                                {topic.name}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-gray-100 bg-gray-50 text-right">
+                            <button onClick={onClose} className="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium text-sm">
+                                ปิดหน้าต่าง
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Dek71Dashboard = () => {
+            const [subjects, setSubjects] = React.useState([]);
+            const [totalReadiness, setTotalReadiness] = React.useState(0);
+            const [averageScore, setAverageScore] = React.useState(0);
+            const [selectedSubject, setSelectedSubject] = React.useState(null);
+            
+            const [status, setStatus] = React.useState('connecting'); 
+            const [examDateStr, setExamDateStr] = React.useState('2028-03-15');
+            const [timeLeft, setTimeLeft] = React.useState({ days: 0, hours: 0 });
+            const [isEditingDate, setIsEditingDate] = React.useState(false);
+
+            const createInitialData = () => {
+                return [
+                    { id: 'tpat1', name: 'TPAT1 (กสพท)', weight: 30, color: 'bg-orange-500', icon: 'Brain', targetScore: 200 },
+                    { id: 'math1', name: 'คณิตศาสตร์ 1', weight: 14, color: 'bg-blue-600', icon: 'Target', targetScore: 50 },
+                    { id: 'phy', name: 'ฟิสิกส์', weight: 9.33, color: 'bg-indigo-500', icon: 'Book', targetScore: 45 },
+                    { id: 'chem', name: 'เคมี', weight: 9.33, color: 'bg-teal-500', icon: 'Book', targetScore: 50 },
+                    { id: 'bio', name: 'ชีววิทยา', weight: 9.33, color: 'bg-green-500', icon: 'Book', targetScore: 60 },
+                    { id: 'eng', name: 'ภาษาอังกฤษ', weight: 14, color: 'bg-purple-600', icon: 'Book', targetScore: 70 },
+                    { id: 'thai', name: 'ภาษาไทย', weight: 7, color: 'bg-pink-500', icon: 'Book', targetScore: 70 },
+                    { id: 'soc', name: 'สังคมศึกษา', weight: 7, color: 'bg-yellow-500', icon: 'Book', targetScore: 60 },
+                ].map(sub => ({
+                    ...sub,
+                    progress: 0,
+                    lastUpdated: null,
+                    scoreHistory: [],
+                    topics: MASTER_CURRICULUM[sub.id] ? MASTER_CURRICULUM[sub.id].map(topic => ({ name: topic, completed: false })) : []
+                }));
+            };
+
+            // Load Data from Firebase
+            React.useEffect(() => {
+                if (!db) return setStatus('error');
+                
+                const docRef = db.collection('dek71_data').doc('user_data');
+                const unsubscribe = docRef.onSnapshot((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        const migratedData = (data.subjects || []).map(sub => {
+                            if (!sub.scoreHistory) {
+                                sub.scoreHistory = sub.currentScore > 0 ? [{ date: new Date().toISOString(), score: sub.currentScore }] : [];
+                            }
+                            return sub;
+                        });
+                        setSubjects(migratedData);
+                        if(data.examDate) setExamDateStr(data.examDate);
+                    } else {
+                        const initialData = createInitialData();
+                        docRef.set({ subjects: initialData, examDate: '2028-03-15' });
+                        setSubjects(initialData);
+                    }
+                    setStatus('online');
+                }, (err) => {
+                    console.error("Firebase Error: ", err);
+                    setStatus('error');
+                });
+                return () => unsubscribe();
+            }, []);
+
+            // Countdown Logic
+            React.useEffect(() => {
+                const timer = setInterval(() => {
+                    const examDate = new Date(examDateStr + 'T00:00:00');
+                    const now = new Date();
+                    const difference = examDate - now;
+                    const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+                    setTimeLeft({ days, hours });
+                }, 1000);
+                return () => clearInterval(timer);
+            }, [examDateStr]);
+
+            const handleDateChange = (e) => {
+                const newDate = e.target.value;
+                setExamDateStr(newDate);
+                if (db) db.collection('dek71_data').doc('user_data').update({ examDate: newDate });
+                setIsEditingDate(false);
+            };
+
+            // Calculations
+            React.useEffect(() => {
+                if (subjects.length > 0) {
+                    const weightedScore = subjects.reduce((acc, sub) => acc + (sub.progress * sub.weight / 100), 0);
+                    setTotalReadiness(weightedScore);
+
+                    const subjectsWithScore = subjects.filter(s => s.scoreHistory && s.scoreHistory.length > 0);
+                    if (subjectsWithScore.length > 0) {
+                        const sumLatest = subjectsWithScore.reduce((acc, s) => acc + s.scoreHistory[s.scoreHistory.length-1].score, 0);
+                        setAverageScore(sumLatest / subjectsWithScore.length);
+                    } else {
+                        setAverageScore(0);
+                    }
+                }
+            }, [subjects]);
+
+            const getLatestScore = (subject) => {
+                if (subject.scoreHistory && subject.scoreHistory.length > 0) {
+                    return subject.scoreHistory[subject.scoreHistory.length - 1].score;
+                }
+                return 0;
+            };
+
+            // Sync Data to Firebase Helper
+            const saveDataToFirebase = (newSubjects) => {
+                if (!db) return;
+                setStatus('syncing');
+                db.collection('dek71_data').doc('user_data').update({ subjects: newSubjects })
+                    .then(() => setStatus('online'))
+                    .catch(() => setStatus('error'));
+            };
+
+            const updateSubjectState = (subjectId, updaterFn) => {
+                const newSubjects = subjects.map(sub => {
+                    if (sub.id !== subjectId) return sub;
+                    const updatedSub = updaterFn(sub);
+                    updatedSub.lastUpdated = new Date().toISOString();
+                    
+                    if (selectedSubject && selectedSubject.id === subjectId) {
+                        setSelectedSubject(updatedSub);
+                    }
+                    return updatedSub;
+                });
+                
+                setSubjects(newSubjects); // Update UI
+                saveDataToFirebase(newSubjects); // Send to Cloud
+            };
+
+            const handleUpdateTopic = (subjectId, topicIndex) => {
+                updateSubjectState(subjectId, (sub) => {
+                    const newTopics = sub.topics.map((topic, i) => 
+                        i === topicIndex ? { ...topic, completed: !topic.completed } : topic
+                    );
+                    const completedCount = newTopics.filter(t => t.completed).length;
+                    const newProgress = Math.round((completedCount / newTopics.length) * 100);
+                    return { ...sub, topics: newTopics, progress: newProgress };
+                });
+            };
+
+            const handleAddScore = (subjectId, score, date) => {
+                updateSubjectState(subjectId, (sub) => {
+                    const newHistory = [...(sub.scoreHistory || []), { score, date }];
+                    return { ...sub, scoreHistory: newHistory };
+                });
+            };
+
+            const handleDeleteScore = (subjectId, index) => {
+                 updateSubjectState(subjectId, (sub) => {
+                    const newHistory = [...sub.scoreHistory];
+                    newHistory.splice(index, 1);
+                    return { ...sub, scoreHistory: newHistory };
+                });
+            };
+
+            const handleUpdateTarget = (subjectId, val) => {
+                updateSubjectState(subjectId, (sub) => {
+                     const numValue = val === '' ? 0 : parseInt(val);
+                     return { ...sub, targetScore: numValue };
+                });
+            };
+
+            const handleReset = () => {
+                if (confirm('ยืนยันรีเซ็ตข้อมูลทั้งหมด?')) {
+                    const freshData = createInitialData();
+                    setSubjects(freshData);
+                    if (db) db.collection('dek71_data').doc('user_data').update({ subjects: freshData });
+                }
+            };
+
+            return (
+                <div className="max-w-6xl mx-auto p-4 md:p-8 min-h-screen">
+                    <header className="mb-8">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
+                                    <span className="bg-indigo-600 text-white p-2 rounded-lg"><Icons.Target /></span>
+                                    Dek71 Tracker
+                                </h1>
+                                <div className="flex items-center gap-2 mt-2 ml-1">
+                                    <div className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-green-500' : (status === 'syncing' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500')}`}></div>
+                                    <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Deep Dive Analytics • {status}</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+                                <div>
+                                    <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">Countdown To Exam</div>
+                                    <div className="text-xl font-bold text-indigo-700 flex items-center gap-2">
+                                        <Icons.Clock />
+                                        {timeLeft.days} วัน {timeLeft.hours} ชม.
+                                    </div>
+                                    {isEditingDate ? (
+                                        <input 
+                                            type="date" 
+                                            value={examDateStr} 
+                                            onChange={handleDateChange} 
+                                            onBlur={() => setIsEditingDate(false)}
+                                            className="text-xs border rounded p-1 mt-1"
+                                            autoFocus
+                                        />
+                                    ) : (
+                                        <div className="text-xs text-gray-400 flex items-center gap-1 cursor-pointer hover:text-indigo-500" onClick={() => setIsEditingDate(true)}>
+                                            Target: {new Date(examDateStr).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric'})} 
+                                            <Icons.Edit />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="h-10 w-px bg-gray-100 mx-2"></div>
+                                <button onClick={handleReset} className="text-gray-400 hover:text-red-500 text-xs flex flex-col items-center gap-1 transition-colors">
+                                    <Icons.Refresh /> Reset
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
+                                <div className="relative z-10">
+                                    <div className="text-sm font-medium opacity-90 mb-1">ความพร้อมรวม (Weighted Readiness)</div>
+                                    <div className="text-4xl font-bold">{totalReadiness.toFixed(2)}%</div>
+                                    <div className="w-full bg-black/20 rounded-full h-1.5 mt-3 overflow-hidden">
+                                        <div className="bg-white h-full rounded-full" style={{ width: `${totalReadiness}%` }}></div>
+                                    </div>
+                                </div>
+                                <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
+                                    <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center justify-between relative overflow-hidden">
+                                <div>
+                                    <div className="text-sm text-gray-500 font-medium mb-1 flex items-center gap-2">
+                                        <span className="text-orange-500"><Icons.Trophy /></span>
+                                        คะแนนเฉลี่ยล่าสุด (Avg. Score)
+                                    </div>
+                                    <div className="flex items-baseline gap-2">
+                                        <div className="text-4xl font-bold text-gray-800">{averageScore.toFixed(0)}</div>
+                                        <div className="text-sm text-gray-400">/ 100 คะแนน</div>
+                                    </div>
+                                    <div className="text-xs text-gray-400 mt-2">
+                                        จาก {subjects.filter(s => s.scoreHistory && s.scoreHistory.length > 0).length} วิชาที่มีประวัติคะแนน
+                                    </div>
+                                </div>
+                                <div className="flex items-end gap-1 h-12 w-32 justify-end">
+                                    {subjects.map(s => {
+                                        const score = getLatestScore(s);
+                                        return (
+                                            <div key={s.id} 
+                                                 className={`w-2 rounded-t-sm ${score > 0 ? s.color.replace('bg-', 'bg-') : 'bg-gray-100'}`} 
+                                                 style={{ height: `${score}%` }}
+                                                 title={`${s.name}: ${score}`}
+                                            ></div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pb-10">
+                        {subjects.map((sub) => {
+                            const latestScore = getLatestScore(sub);
+                            return (
+                                <div 
+                                    key={sub.id} 
+                                    onClick={() => setSelectedSubject(sub)}
+                                    className="group bg-white rounded-xl shadow-sm border border-gray-100 p-5 cursor-pointer hover:shadow-lg hover:border-indigo-100 transition-all duration-300 relative overflow-hidden"
+                                >
+                                    <div className={`absolute bottom-0 left-0 h-1 ${sub.color}`} style={{ width: `${sub.progress}%` }}></div>
+
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className={`p-2 rounded-lg ${sub.color} bg-opacity-10 text-gray-700`}>
+                                            {sub.icon === 'Target' ? <Icons.Target /> : sub.icon === 'Brain' ? <Icons.Brain /> : <Icons.Book />}
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-2xl font-bold text-gray-800">{sub.progress}%</div>
+                                            <div className="text-[10px] text-gray-400">Complete</div>
+                                        </div>
+                                    </div>
+
+                                    <h3 className="font-bold text-gray-800 mb-1">{sub.name}</h3>
+                                    
+                                    <div className="flex justify-between items-center mt-3 mb-3 bg-gray-50 p-2 rounded-lg">
+                                        <span className="text-xs text-gray-500">Latest Score:</span>
+                                        <span className={`text-sm font-bold ${latestScore >= sub.targetScore && latestScore > 0 ? 'text-green-600' : 'text-gray-700'}`}>
+                                            {latestScore || '-'}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-2 border-t border-gray-50 pt-2">
+                                        <Icons.Clock /> 
+                                        {sub.lastUpdated 
+                                            ? `Update: ${new Date(sub.lastUpdated).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'})}` 
+                                            : 'ยังไม่อัปเดต'}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {selectedSubject && (
+                        <SubjectModal 
+                            subject={selectedSubject} 
+                            onClose={() => setSelectedSubject(null)} 
+                            onUpdateTopic={handleUpdateTopic}
+                            onAddScore={handleAddScore}
+                            onDeleteScore={handleDeleteScore}
+                            onUpdateTarget={handleUpdateTarget}
+                        />
+                    )}
+
+                    <div className="text-center text-xs text-gray-400 pb-8 flex justify-center items-center gap-1">
+                         <div className={`w-1.5 h-1.5 rounded-full ${status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                         ข้อมูลถูกเชื่อมต่อกับ Firebase Database อัตโนมัติ (Cloud Sync)
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Dek71Dashboard />);
+    </script>
+</body>
+</html>
