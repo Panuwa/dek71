@@ -5,17 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dek71 Mission Control: Deep Dive (Cloud Sync)</title>
     
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Tailwind CSS -->
+    <!-- เปลี่ยนมาใช้ cdnjs เพื่อความเสถียรในการโหลด -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Google Fonts: Noto Sans Thai -->
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Firebase SDKs -->
@@ -32,11 +28,29 @@
     </style>
 </head>
 <body>
+    <!-- หน้าจอโหลดดิ้งเริ่มต้น -->
     <div id="root" class="flex items-center justify-center min-h-screen text-gray-400">
-        <div class="text-center">
-            <p class="text-xl font-bold">กำลังเชื่อมต่อฐานข้อมูล...</p>
+        <div class="text-center animate-pulse">
+            <p class="text-xl font-bold" id="loading-text">กำลังโหลดส่วนประกอบระบบ...</p>
+            <p class="text-sm mt-2">Dek71 Mission Control</p>
         </div>
     </div>
+
+    <!-- สคริปต์ป้องกันการค้าง (Failsafe) -->
+    <script>
+        setTimeout(function() {
+            var root = document.getElementById('root');
+            if (root && root.innerHTML.includes('กำลังโหลดส่วนประกอบระบบ')) {
+                root.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #ef4444; font-family: sans-serif;">
+                        <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">⚠️ เกิดข้อผิดพลาดในการโหลดระบบ (Timeout)</h3>
+                        <p style="color: #6b7280; font-size: 14px;">อาจเกิดจากอินเทอร์เน็ตมีปัญหา หรือถูกบล็อคด้วย Ad-blocker/Antivirus</p>
+                        <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">ลองรีเฟรชอีกครั้ง</button>
+                    </div>
+                `;
+            }
+        }, 6000);
+    </script>
 
     <script type="text/babel">
         // ==========================================
@@ -52,13 +66,15 @@
           measurementId: "G-YDCNM0C1FR"
         };
 
-        let db;
+        let db = null;
         try {
-            if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
-            }
             if (typeof firebase !== 'undefined') {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
                 db = firebase.firestore();
+            } else {
+                console.warn("Firebase script not loaded. Running in offline mode.");
             }
         } catch (e) {
             console.error("Firebase Init Error:", e);
@@ -333,9 +349,21 @@
                 }));
             };
 
-            // Load Data from Firebase
+            // Load Data
             React.useEffect(() => {
-                if (!db) return setStatus('error');
+                if (!db) {
+                    console.warn("No DB instance available. Using offline mode.");
+                    setStatus('offline');
+                    
+                    // Offline Fallback - โหลดข้อมูลจากในเครื่องแทน
+                    const savedData = localStorage.getItem('dek71_local_backup');
+                    if (savedData) {
+                        setSubjects(JSON.parse(savedData));
+                    } else {
+                        setSubjects(createInitialData());
+                    }
+                    return;
+                }
                 
                 const docRef = db.collection('dek71_data').doc('user_data');
                 const unsubscribe = docRef.onSnapshot((doc) => {
@@ -348,17 +376,25 @@
                             return sub;
                         });
                         setSubjects(migratedData);
+                        // Save local backup just in case
+                        localStorage.setItem('dek71_local_backup', JSON.stringify(migratedData));
+                        
                         if(data.examDate) setExamDateStr(data.examDate);
                     } else {
                         const initialData = createInitialData();
-                        docRef.set({ subjects: initialData, examDate: '2028-03-15' });
+                        docRef.set({ subjects: initialData, examDate: '2028-03-15' }).catch(e => console.error("Write error:", e));
                         setSubjects(initialData);
                     }
                     setStatus('online');
                 }, (err) => {
-                    console.error("Firebase Error: ", err);
-                    setStatus('error');
+                    console.error("Firebase Sync Error: ", err);
+                    setStatus('offline (error)');
+                    // โหลดข้อมูลเก่ามาโชว์ถ้ายิงเข้าเซิฟเวอร์ไม่ได้
+                    const savedData = localStorage.getItem('dek71_local_backup');
+                    if (savedData) setSubjects(JSON.parse(savedData));
+                    else setSubjects(createInitialData());
                 });
+                
                 return () => unsubscribe();
             }, []);
 
@@ -368,6 +404,12 @@
                     const examDate = new Date(examDateStr + 'T00:00:00');
                     const now = new Date();
                     const difference = examDate - now;
+                    
+                    if (difference <= 0) {
+                        setTimeLeft({ days: 0, hours: 0 });
+                        return;
+                    }
+                    
                     const days = Math.floor(difference / (1000 * 60 * 60 * 24));
                     const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
                     setTimeLeft({ days, hours });
@@ -378,7 +420,7 @@
             const handleDateChange = (e) => {
                 const newDate = e.target.value;
                 setExamDateStr(newDate);
-                if (db) db.collection('dek71_data').doc('user_data').update({ examDate: newDate });
+                if (db) db.collection('dek71_data').doc('user_data').update({ examDate: newDate }).catch(e => console.error(e));
                 setIsEditingDate(false);
             };
 
@@ -386,7 +428,7 @@
             React.useEffect(() => {
                 if (subjects.length > 0) {
                     const weightedScore = subjects.reduce((acc, sub) => acc + (sub.progress * sub.weight / 100), 0);
-                    setTotalReadiness(weightedScore);
+                    setTotalReadiness(weightedScore || 0);
 
                     const subjectsWithScore = subjects.filter(s => s.scoreHistory && s.scoreHistory.length > 0);
                     if (subjectsWithScore.length > 0) {
@@ -405,13 +447,19 @@
                 return 0;
             };
 
-            // Sync Data to Firebase Helper
+            // Sync Data Helper
             const saveDataToFirebase = (newSubjects) => {
+                // Save to local backup regardless of network
+                localStorage.setItem('dek71_local_backup', JSON.stringify(newSubjects));
+                
                 if (!db) return;
-                setStatus('syncing');
+                setStatus('syncing...');
                 db.collection('dek71_data').doc('user_data').update({ subjects: newSubjects })
                     .then(() => setStatus('online'))
-                    .catch(() => setStatus('error'));
+                    .catch((e) => {
+                        console.error("Save error:", e);
+                        setStatus('offline (error)');
+                    });
             };
 
             const updateSubjectState = (subjectId, updaterFn) => {
@@ -426,8 +474,8 @@
                     return updatedSub;
                 });
                 
-                setSubjects(newSubjects); // Update UI
-                saveDataToFirebase(newSubjects); // Send to Cloud
+                setSubjects(newSubjects); // Update UI Immediately
+                saveDataToFirebase(newSubjects); // Sync Background
             };
 
             const handleUpdateTopic = (subjectId, topicIndex) => {
@@ -436,7 +484,7 @@
                         i === topicIndex ? { ...topic, completed: !topic.completed } : topic
                     );
                     const completedCount = newTopics.filter(t => t.completed).length;
-                    const newProgress = Math.round((completedCount / newTopics.length) * 100);
+                    const newProgress = newTopics.length > 0 ? Math.round((completedCount / newTopics.length) * 100) : 0;
                     return { ...sub, topics: newTopics, progress: newProgress };
                 });
             };
@@ -467,6 +515,7 @@
                 if (confirm('ยืนยันรีเซ็ตข้อมูลทั้งหมด?')) {
                     const freshData = createInitialData();
                     setSubjects(freshData);
+                    localStorage.removeItem('dek71_local_backup');
                     if (db) db.collection('dek71_data').doc('user_data').update({ subjects: freshData });
                 }
             };
@@ -481,7 +530,7 @@
                                     Dek71 Tracker
                                 </h1>
                                 <div className="flex items-center gap-2 mt-2 ml-1">
-                                    <div className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-green-500' : (status === 'syncing' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500')}`}></div>
+                                    <div className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-green-500' : (status.includes('syncing') ? 'bg-yellow-500 animate-pulse' : 'bg-red-500')}`}></div>
                                     <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Deep Dive Analytics • {status}</p>
                                 </div>
                             </div>
@@ -611,17 +660,22 @@
                             onUpdateTarget={handleUpdateTarget}
                         />
                     )}
-
-                    <div className="text-center text-xs text-gray-400 pb-8 flex justify-center items-center gap-1">
-                         <div className={`w-1.5 h-1.5 rounded-full ${status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                         ข้อมูลถูกเชื่อมต่อกับ Firebase Database อัตโนมัติ (Cloud Sync)
-                    </div>
                 </div>
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<Dek71Dashboard />);
+        try {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<Dek71Dashboard />);
+        } catch (error) {
+            document.getElementById('root').innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #ef4444; font-family: sans-serif;">
+                    <h3 style="font-size: 20px; font-weight: bold;">⚠️ เกิดข้อผิดพลาดในการรันระบบ</h3>
+                    <p style="color: #6b7280; font-size: 14px;">${error.message}</p>
+                </div>
+            `;
+            console.error(error);
+        }
     </script>
 </body>
 </html>
