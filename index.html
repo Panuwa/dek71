@@ -5,16 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dek71 Mission Control: Deep Dive (Cloud Sync)</title>
     
-    <!-- เปลี่ยนมาใช้ cdnjs เพื่อความเสถียรในการโหลด -->
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
@@ -28,15 +25,13 @@
     </style>
 </head>
 <body>
-    <!-- หน้าจอโหลดดิ้งเริ่มต้น -->
     <div id="root" class="flex items-center justify-center min-h-screen text-gray-400">
         <div class="text-center animate-pulse">
-            <p class="text-xl font-bold" id="loading-text">กำลังโหลดส่วนประกอบระบบ...</p>
+            <p class="text-xl font-bold" id="loading-text">กำลังโหลดส่วนประกอบระบบเพื่อรุ่น 71...</p>
             <p class="text-sm mt-2">Dek71 Mission Control</p>
         </div>
     </div>
 
-    <!-- สคริปต์ป้องกันการค้าง (Failsafe) -->
     <script>
         setTimeout(function() {
             var root = document.getElementById('root');
@@ -44,7 +39,7 @@
                 root.innerHTML = `
                     <div style="text-align: center; padding: 40px; color: #ef4444; font-family: sans-serif;">
                         <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">⚠️ เกิดข้อผิดพลาดในการโหลดระบบ (Timeout)</h3>
-                        <p style="color: #6b7280; font-size: 14px;">อาจเกิดจากอินเทอร์เน็ตมีปัญหา หรือถูกบล็อคด้วย Ad-blocker/Antivirus</p>
+                        <p style="color: #6b7280; font-size: 14px;">อาจเกิดจากอินเทอร์เน็ตมีปัญหา หรือถูกบล็อคด้วย Ad-blocker</p>
                         <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">ลองรีเฟรชอีกครั้ง</button>
                     </div>
                 `;
@@ -73,8 +68,6 @@
                     firebase.initializeApp(firebaseConfig);
                 }
                 db = firebase.firestore();
-            } else {
-                console.warn("Firebase script not loaded. Running in offline mode.");
             }
         } catch (e) {
             console.error("Firebase Init Error:", e);
@@ -84,7 +77,7 @@
         // --- 2. DATA ---
         // ==========================================
         const MASTER_CURRICULUM = {
-            tpat1: ["เชาวน์ปัญญา (อนุกรม/มิติสัมพันธ์)", "จริยธรรมทางการแพทย์", "ความเชื่อมโยง (GAT)"],
+            tpat1: ["เชาวน์ปัญญา (อนุกรม/มิติสัมพันธ์)", "จริยธรรมทางการแพทย์", "ความเชื่อมโยง (GAT ความคิดเชื่อมโยง)"],
             math1: ["เซต & ตรรกศาสตร์", "จำนวนจริง", "ฟังก์ชัน", "เรขาคณิตวิเคราะห์ & ภาคตัดกรวย", "ฟังก์ชันเอกซ์โพ & ลอการิทึม", "ฟังก์ชันตรีโกณมิติ", "เมทริกซ์", "เวกเตอร์", "จำนวนเชิงซ้อน", "หลักการนับ & ความน่าจะเป็น", "ลำดับและอนุกรม", "แคลคูลัสเบื้องต้น", "สถิติและการแจกแจงความน่าจะเป็น"],
             phy: ["ธรรมชาติและพัฒนาการทางฟิสิกส์", "การเคลื่อนที่แนวตรง", "แรงและกฎการเคลื่อนที่", "สมดุลกล", "งานและพลังงาน", "โมเมนตัมและการชน", "การเคลื่อนที่แนวโค้ง", "การเคลื่อนที่แบบฮาร์มอนิกฯ", "คลื่น", "แสงเชิงคลื่น", "แสงเชิงรังสี", "เสียง", "ไฟฟ้าสถิต", "ไฟฟ้ากระแส", "แม่เหล็กและไฟฟ้า", "ความร้อนและแก๊ส", "ของแข็งและของไหล", "ฟิสิกส์อะตอม", "ฟิสิกส์นิวเคลียร์"],
             chem: ["ความปลอดภัยและทักษะฯ", "อะตอมและสมบัติของธาตุ", "พันธะเคมี", "โมลและสูตรเคมี", "สารละลาย", "ปริมาณสารสัมพันธ์", "แก๊สและสมบัติของแก๊ส", "อัตราการเกิดปฏิกิริยาเคมี", "สมดุลเคมี", "กรด-เบส", "เคมีไฟฟ้า", "เคมีอินทรีย์", "พอลิเมอร์", "เคมีกับการแก้ปัญหา"],
@@ -114,7 +107,7 @@
             if (!history || history.length < 2) return (
                 <div className="flex flex-col items-center justify-center h-32 bg-gray-50 rounded-lg border border-dashed border-gray-200 text-gray-400 text-xs">
                     <Icons.Trophy />
-                    <span className="mt-2">บันทึกคะแนนอย่างน้อย 2 ครั้งเพื่อดูกราฟแนวโน้ม</span>
+                    <span className="mt-2">บันทึกคะแนนจำลองอย่างน้อย 2 ครั้งเพื่อดูพัฒนาการสถิติ</span>
                 </div>
             );
 
@@ -152,21 +145,22 @@
                         })}
                     </svg>
                     <div className="flex justify-between text-[10px] text-gray-400 mt-1 px-2">
-                        <span>Start</span>
+                        <span>ครั้งแรก</span>
                         <div className="flex items-center gap-2">
-                            <span className="flex items-center gap-1"><div className="w-2 h-0.5 bg-green-500"></div> Target ({targetScore})</span>
-                            <span className="flex items-center gap-1"><div className="w-2 h-0.5 bg-indigo-500"></div> Score</span>
+                            <span className="flex items-center gap-1"><div className="w-2 h-0.5 bg-green-500"></div> เป้าหมาย ({targetScore})</span>
+                            <span className="flex items-center gap-1"><div className="w-2 h-0.5 bg-indigo-500"></div> คะแนนจริง</span>
                         </div>
-                        <span>Latest</span>
+                        <span>ล่าสุด</span>
                     </div>
                 </div>
             );
         };
 
-        const SubjectModal = ({ subject, onClose, onUpdateTopic, onAddScore, onDeleteScore, onUpdateTarget }) => {
+        const SubjectModal = ({ subject, onClose, onUpdateTopic, onAddCustomTopic, onDeleteCustomTopic, onAddScore, onDeleteScore, onUpdateTarget }) => {
             if (!subject) return null;
             const [newScore, setNewScore] = React.useState('');
             const [newDate, setNewDate] = React.useState(new Date().toISOString().split('T')[0]);
+            const [customTopicName, setCustomTopicName] = React.useState('');
 
             const handleAddScore = () => {
                 if (newScore === '') return;
@@ -174,9 +168,12 @@
                 setNewScore('');
             };
 
-            const latestScore = subject.scoreHistory && subject.scoreHistory.length > 0 
-                ? subject.scoreHistory[subject.scoreHistory.length - 1].score 
-                : 0;
+            const handleAddCustomTopic = (e) => {
+                e.preventDefault();
+                if (!customTopicName.trim()) return;
+                onAddCustomTopic(subject.id, customTopicName.trim());
+                setCustomTopicName('');
+            };
 
             return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -190,7 +187,7 @@
                                 </div>
                                 <div>
                                     <h2 className="text-2xl font-bold text-gray-800">{subject.name}</h2>
-                                    <p className="text-sm text-gray-500 font-medium">Weight: {subject.weight}% • Progress: {subject.progress}%</p>
+                                    <p className="text-sm text-gray-500 font-medium">น้ำหนักสัดส่วน: {subject.weight}% • ความคืบหน้าภาพรวม: {subject.progress}%</p>
                                 </div>
                             </div>
                             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
@@ -199,111 +196,99 @@
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+                            {/* ส่วนผลงานสถิติคะแนน */}
                             <div className="mb-8 bg-gray-50 rounded-xl p-5 border border-gray-100">
                                 <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                    <Icons.Trophy /> Test Performance & Trend
+                                    <Icons.Trophy /> บันทึกสถิติคะแนนสอบ (Mock Exam)
                                 </h3>
 
                                 <ScoreChart history={subject.scoreHistory} targetScore={subject.targetScore} />
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label className="text-xs text-gray-500 mb-2 block font-bold">🎯 ตั้งเป้าหมาย (Target Score)</label>
+                                        <label className="text-xs text-gray-500 mb-2 block font-bold">🎯 ตั้งคะแนนเป้าหมาย (เต็ม 100)</label>
                                         <div className="flex items-center gap-2">
                                             <input 
                                                 type="number" 
                                                 value={subject.targetScore || ''} 
                                                 onChange={(e) => onUpdateTarget(subject.id, e.target.value)}
                                                 className="w-full font-bold text-indigo-600 bg-gray-50 border border-gray-200 rounded p-2 focus:ring-1 focus:ring-indigo-500"
-                                                placeholder="60"
+                                                placeholder="เช่น 65"
                                             />
-                                            <span className="text-xs text-gray-400">/100</span>
                                         </div>
                                     </div>
                                     <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label className="text-xs text-gray-500 mb-2 block font-bold">📝 เพิ่มคะแนนสอบใหม่ (New Test)</label>
+                                        <label className="text-xs text-gray-500 mb-2 block font-bold">📝 เพิ่มผลสอบจำลองล่าสุด</label>
                                         <div className="flex gap-2">
-                                            <input 
-                                                type="date" 
-                                                value={newDate}
-                                                onChange={(e) => setNewDate(e.target.value)}
-                                                className="w-1/3 text-xs border border-gray-200 rounded p-2 bg-gray-50"
-                                            />
                                             <input 
                                                 type="number" 
                                                 value={newScore}
                                                 onChange={(e) => setNewScore(e.target.value)}
-                                                className="w-1/3 text-sm border border-gray-200 rounded p-2 focus:ring-1 focus:ring-green-500"
-                                                placeholder="Score"
+                                                className="w-full text-sm border border-gray-200 rounded p-2 focus:ring-1 focus:ring-green-500"
+                                                placeholder="คะแนน"
                                             />
                                             <button 
                                                 onClick={handleAddScore}
-                                                className="flex-1 bg-gray-800 text-white text-xs rounded hover:bg-gray-900 flex items-center justify-center gap-1"
+                                                className="bg-gray-800 text-white text-xs px-4 rounded hover:bg-gray-900 flex items-center gap-1 shrink-0"
                                             >
-                                                <Icons.Plus /> Add
+                                                <Icons.Plus /> เพิ่ม
                                             </button>
                                         </div>
                                     </div>
                                 </div>
-
-                                <div>
-                                    <h4 className="text-xs font-bold text-gray-400 mb-2">History Log</h4>
-                                    <div className="max-h-32 overflow-y-auto border border-gray-100 rounded-lg bg-white">
-                                        {(!subject.scoreHistory || subject.scoreHistory.length === 0) ? (
-                                            <div className="p-3 text-xs text-gray-400 text-center">ยังไม่มีประวัติการสอบ</div>
-                                        ) : (
-                                            <table className="w-full text-xs text-left">
-                                                <thead className="bg-gray-50 text-gray-500">
-                                                    <tr>
-                                                        <th className="p-2">Date</th>
-                                                        <th className="p-2">Score</th>
-                                                        <th className="p-2 text-right">Action</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {[...subject.scoreHistory].reverse().map((entry, idx) => (
-                                                        <tr key={idx} className="border-t border-gray-50 hover:bg-gray-50">
-                                                            <td className="p-2 text-gray-600">{new Date(entry.date).toLocaleDateString('th-TH')}</td>
-                                                            <td className="p-2 font-bold text-gray-800">{entry.score}</td>
-                                                            <td className="p-2 text-right">
-                                                                <button 
-                                                                    onClick={() => onDeleteScore(subject.id, (subject.scoreHistory.length - 1) - idx)}
-                                                                    className="text-gray-300 hover:text-red-500"
-                                                                >
-                                                                    <Icons.Trash />
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        )}
-                                    </div>
-                                </div>
                             </div>
 
-                            <div>
-                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">
-                                    Topic Checklist
+                            {/* ระบบเพิ่มหัวข้อ Dynamic Checklist */}
+                            <div className="mb-6">
+                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex justify-between items-center">
+                                    <span>หัวข้อบทเรียนและแผนปฎิบัติงาน ({subject.topics.length})</span>
                                 </h3>
-                                <div className="space-y-3">
+
+                                <form onSubmit={handleAddCustomTopic} className="flex gap-2 mb-4">
+                                    <input 
+                                        type="text" 
+                                        value={customTopicName}
+                                        onChange={(e) => setCustomTopicName(e.target.value)}
+                                        placeholder="➕ พิมพ์เพิ่มหัวข้อบทเรียนย่อยหรือ Checklist แผนงานของน้องได้ที่นี่..."
+                                        className="flex-1 text-sm border border-gray-200 rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                    />
+                                    <button 
+                                        type="submit"
+                                        className="bg-indigo-600 text-white text-sm px-4 rounded-lg hover:bg-indigo-700 flex items-center gap-1 font-medium"
+                                    >
+                                        <Icons.Plus /> เพิ่มเนื้อหา
+                                    </button>
+                                </form>
+
+                                <div className="space-y-2">
                                     {subject.topics.map((topic, index) => (
-                                        <label key={index} className="flex items-center p-3 rounded-lg border border-gray-100 hover:bg-gray-50 hover:border-gray-200 cursor-pointer transition-all group">
-                                            <div className="relative flex items-center">
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={topic.completed} 
-                                                    onChange={() => onUpdateTopic(subject.id, index)}
-                                                    className="peer h-6 w-6 cursor-pointer appearance-none rounded-md border-2 border-gray-300 transition-all checked:border-green-500 checked:bg-green-500 hover:border-indigo-400"
-                                                />
-                                                <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100">
-                                                    <Icons.Check />
+                                        <div key={index} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-all group">
+                                            <label className="flex items-center cursor-pointer flex-1 mr-4">
+                                                <div className="relative flex items-center">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={topic.completed} 
+                                                        onChange={() => onUpdateTopic(subject.id, index)}
+                                                        className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-gray-300 transition-all checked:border-green-500 checked:bg-green-500"
+                                                    />
+                                                    <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100">
+                                                        <Icons.Check />
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <span className={`ml-3 text-sm transition-colors ${topic.completed ? 'text-gray-400 line-through' : 'text-gray-700 font-medium'}`}>
-                                                {topic.name}
-                                            </span>
-                                        </label>
+                                                <span className={`ml-3 text-sm transition-colors ${topic.completed ? 'text-gray-400 line-through' : 'text-gray-700 font-medium'}`}>
+                                                    {topic.name}
+                                                </span>
+                                            </label>
+                                            
+                                            {/* ปุ่มลบกรณีหัวข้อตกหล่นหรืออยากเคลียร์ */}
+                                            <button 
+                                                onClick={() => onDeleteCustomTopic(subject.id, index)}
+                                                className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                                title="ลบหัวข้อนี้"
+                                            >
+                                                <Icons.Trash />
+                                            </button>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
@@ -311,7 +296,7 @@
 
                         <div className="p-4 border-t border-gray-100 bg-gray-50 text-right">
                             <button onClick={onClose} className="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium text-sm">
-                                ปิดหน้าต่าง
+                                บันทึกและปิดหน้าต่าง
                             </button>
                         </div>
                     </div>
@@ -324,19 +309,24 @@
             const [totalReadiness, setTotalReadiness] = React.useState(0);
             const [averageScore, setAverageScore] = React.useState(0);
             const [selectedSubject, setSelectedSubject] = React.useState(null);
-            
             const [status, setStatus] = React.useState('connecting'); 
-            const [examDateStr, setExamDateStr] = React.useState('2028-03-15');
-            const [timeLeft, setTimeLeft] = React.useState({ days: 0, hours: 0 });
-            const [isEditingDate, setIsEditingDate] = React.useState(false);
+            
+            // เพิ่มการแยกสถานะวันสอบของ TPAT1 และ A-Level ออกจากกันชัดเจน
+            const [tpatDateStr, setTpatDateStr] = React.useState('2027-12-18'); 
+            const [alevelDateStr, setAlevelDateStr] = React.useState('2028-03-18');
+            const [isEditingTpat, setIsEditingTpat] = React.useState(false);
+            const [isEditingAlevel, setIsEditingAlevel] = React.useState(false);
+
+            const [tpatCountdown, setTpatCountdown] = React.useState({ days: 0 });
+            const [alevelCountdown, setAlevelCountdown] = React.useState({ days: 0 });
 
             const createInitialData = () => {
                 return [
-                    { id: 'tpat1', name: 'TPAT1 (กสพท)', weight: 30, color: 'bg-orange-500', icon: 'Brain', targetScore: 200 },
-                    { id: 'math1', name: 'คณิตศาสตร์ 1', weight: 14, color: 'bg-blue-600', icon: 'Target', targetScore: 50 },
-                    { id: 'phy', name: 'ฟิสิกส์', weight: 9.33, color: 'bg-indigo-500', icon: 'Book', targetScore: 45 },
-                    { id: 'chem', name: 'เคมี', weight: 9.33, color: 'bg-teal-500', icon: 'Book', targetScore: 50 },
-                    { id: 'bio', name: 'ชีววิทยา', weight: 9.33, color: 'bg-green-500', icon: 'Book', targetScore: 60 },
+                    { id: 'tpat1', name: 'TPAT1 (ความถนัดแพทย์)', weight: 30, color: 'bg-orange-500', icon: 'Brain', targetScore: 65 },
+                    { id: 'math1', name: 'คณิตศาสตร์ 1', weight: 14, color: 'bg-blue-600', icon: 'Target', targetScore: 60 },
+                    { id: 'phy', name: 'ฟิสิกส์', weight: 9.33, color: 'bg-indigo-500', icon: 'Book', targetScore: 55 },
+                    { id: 'chem', name: 'เคมี', weight: 9.33, color: 'bg-teal-500', icon: 'Book', targetScore: 60 },
+                    { id: 'bio', name: 'ชีววิทยา', weight: 9.33, color: 'bg-green-500', icon: 'Book', targetScore: 65 },
                     { id: 'eng', name: 'ภาษาอังกฤษ', weight: 14, color: 'bg-purple-600', icon: 'Book', targetScore: 70 },
                     { id: 'thai', name: 'ภาษาไทย', weight: 7, color: 'bg-pink-500', icon: 'Book', targetScore: 70 },
                     { id: 'soc', name: 'สังคมศึกษา', weight: 7, color: 'bg-yellow-500', icon: 'Book', targetScore: 60 },
@@ -349,82 +339,65 @@
                 }));
             };
 
-            // Load Data
+            // ดึงข้อมูลและ Sync ระบบคลาวด์
             React.useEffect(() => {
                 if (!db) {
-                    console.warn("No DB instance available. Using offline mode.");
                     setStatus('offline');
-                    
-                    // Offline Fallback - โหลดข้อมูลจากในเครื่องแทน
-                    const savedData = localStorage.getItem('dek71_local_backup');
+                    const savedData = localStorage.getItem('dek71_local_v2');
                     if (savedData) {
-                        setSubjects(JSON.parse(savedData));
+                        const parsed = JSON.parse(savedData);
+                        setSubjects(parsed.subjects || createInitialData());
+                        if(parsed.tpatDate) setTpatDateStr(parsed.tpatDate);
+                        if(parsed.alevelDate) setAlevelDateStr(parsed.alevelDate);
                     } else {
                         setSubjects(createInitialData());
                     }
                     return;
                 }
                 
-                const docRef = db.collection('dek71_data').doc('user_data');
+                const docRef = db.collection('dek71_data').doc('user_control_v2');
                 const unsubscribe = docRef.onSnapshot((doc) => {
                     if (doc.exists) {
                         const data = doc.data();
-                        const migratedData = (data.subjects || []).map(sub => {
-                            if (!sub.scoreHistory) {
-                                sub.scoreHistory = sub.currentScore > 0 ? [{ date: new Date().toISOString(), score: sub.currentScore }] : [];
-                            }
-                            return sub;
-                        });
-                        setSubjects(migratedData);
-                        // Save local backup just in case
-                        localStorage.setItem('dek71_local_backup', JSON.stringify(migratedData));
-                        
-                        if(data.examDate) setExamDateStr(data.examDate);
+                        setSubjects(data.subjects || createInitialData());
+                        if(data.tpatDate) setTpatDateStr(data.tpatDate);
+                        if(data.alevelDate) setAlevelDateStr(data.alevelDate);
                     } else {
                         const initialData = createInitialData();
-                        docRef.set({ subjects: initialData, examDate: '2028-03-15' }).catch(e => console.error("Write error:", e));
+                        docRef.set({ subjects: initialData, tpatDate: '2027-12-18', alevelDate: '2028-03-18' });
                         setSubjects(initialData);
                     }
                     setStatus('online');
                 }, (err) => {
-                    console.error("Firebase Sync Error: ", err);
                     setStatus('offline (error)');
-                    // โหลดข้อมูลเก่ามาโชว์ถ้ายิงเข้าเซิฟเวอร์ไม่ได้
-                    const savedData = localStorage.getItem('dek71_local_backup');
-                    if (savedData) setSubjects(JSON.parse(savedData));
-                    else setSubjects(createInitialData());
+                    const savedData = localStorage.getItem('dek71_local_v2');
+                    if (savedData) setSubjects(JSON.parse(savedData).subjects);
                 });
                 
                 return () => unsubscribe();
             }, []);
 
-            // Countdown Logic
+            // ตัวนับถอยหลังแยกงานสอบความถี่ Real-time
             React.useEffect(() => {
                 const timer = setInterval(() => {
-                    const examDate = new Date(examDateStr + 'T00:00:00');
-                    const now = new Date();
-                    const difference = examDate - now;
-                    
-                    if (difference <= 0) {
-                        setTimeLeft({ days: 0, hours: 0 });
-                        return;
-                    }
-                    
-                    const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-                    const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-                    setTimeLeft({ days, hours });
+                    const calculateDays = (dateStr) => {
+                        const diff = new Date(dateStr + 'T00:00:00') - new Date();
+                        return diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
+                    };
+                    setTpatCountdown({ days: calculateDays(tpatDateStr) });
+                    setAlevelCountdown({ days: calculateDays(alevelDateStr) });
                 }, 1000);
                 return () => clearInterval(timer);
-            }, [examDateStr]);
+            }, [tpatDateStr, alevelDateStr]);
 
-            const handleDateChange = (e) => {
-                const newDate = e.target.value;
-                setExamDateStr(newDate);
-                if (db) db.collection('dek71_data').doc('user_data').update({ examDate: newDate }).catch(e => console.error(e));
-                setIsEditingDate(false);
+            const saveState = (updatedSubs, tpatD = tpatDateStr, alevelD = alevelDateStr) => {
+                localStorage.setItem('dek71_local_v2', JSON.stringify({ subjects: updatedSubs, tpatDate: tpatD, alevelDate: alevelD }));
+                if (db) {
+                    db.collection('dek71_data').doc('user_control_v2').set({ subjects: updatedSubs, tpatDate: tpatD, alevelDate: alevelD }).catch(e => console.error(e));
+                }
             };
 
-            // Calculations
+            // อัปเดตข้อมูลวิชาการคำนวณถ่วงน้ำหนักความพร้อม
             React.useEffect(() => {
                 if (subjects.length > 0) {
                     const weightedScore = subjects.reduce((acc, sub) => acc + (sub.progress * sub.weight / 100), 0);
@@ -440,84 +413,58 @@
                 }
             }, [subjects]);
 
-            const getLatestScore = (subject) => {
-                if (subject.scoreHistory && subject.scoreHistory.length > 0) {
-                    return subject.scoreHistory[subject.scoreHistory.length - 1].score;
-                }
-                return 0;
-            };
-
-            // Sync Data Helper
-            const saveDataToFirebase = (newSubjects) => {
-                // Save to local backup regardless of network
-                localStorage.setItem('dek71_local_backup', JSON.stringify(newSubjects));
-                
-                if (!db) return;
-                setStatus('syncing...');
-                db.collection('dek71_data').doc('user_data').update({ subjects: newSubjects })
-                    .then(() => setStatus('online'))
-                    .catch((e) => {
-                        console.error("Save error:", e);
-                        setStatus('offline (error)');
-                    });
-            };
-
             const updateSubjectState = (subjectId, updaterFn) => {
                 const newSubjects = subjects.map(sub => {
                     if (sub.id !== subjectId) return sub;
-                    const updatedSub = updaterFn(sub);
-                    updatedSub.lastUpdated = new Date().toISOString();
-                    
-                    if (selectedSubject && selectedSubject.id === subjectId) {
-                        setSelectedSubject(updatedSub);
-                    }
-                    return updatedSub;
+                    const updated = updaterFn(sub);
+                    updated.lastUpdated = new Date().toISOString();
+                    if (selectedSubject && selectedSubject.id === subjectId) setSelectedSubject(updated);
+                    return updated;
                 });
-                
-                setSubjects(newSubjects); // Update UI Immediately
-                saveDataToFirebase(newSubjects); // Sync Background
+                setSubjects(newSubjects);
+                saveState(newSubjects);
             };
 
+            // จัดการข้อมูล Checklist
             const handleUpdateTopic = (subjectId, topicIndex) => {
                 updateSubjectState(subjectId, (sub) => {
-                    const newTopics = sub.topics.map((topic, i) => 
-                        i === topicIndex ? { ...topic, completed: !topic.completed } : topic
-                    );
-                    const completedCount = newTopics.filter(t => t.completed).length;
-                    const newProgress = newTopics.length > 0 ? Math.round((completedCount / newTopics.length) * 100) : 0;
-                    return { ...sub, topics: newTopics, progress: newProgress };
+                    const newTopics = sub.topics.map((t, i) => i === topicIndex ? { ...t, completed: !t.completed } : t);
+                    const progress = Math.round((newTopics.filter(t => t.completed).length / newTopics.length) * 100);
+                    return { ...sub, topics: newTopics, progress };
+                });
+            };
+
+            // ฟังก์ชันเพิ่มหัวข้อกำหนดเองลงในวิชา
+            const handleAddCustomTopic = (subjectId, topicName) => {
+                updateSubjectState(subjectId, (sub) => {
+                    const newTopics = [...sub.topics, { name: topicName, completed: false }];
+                    const progress = Math.round((newTopics.filter(t => t.completed).length / newTopics.length) * 100);
+                    return { ...sub, topics: newTopics, progress };
+                });
+            };
+
+            // ฟังก์ชันลบหัวข้อกรณีต้องการคัดแยกงานออก
+            const handleDeleteCustomTopic = (subjectId, topicIndex) => {
+                updateSubjectState(subjectId, (sub) => {
+                    const newTopics = sub.topics.filter((_, i) => i !== topicIndex);
+                    const progress = newTopics.length > 0 ? Math.round((newTopics.filter(t => t.completed).length / newTopics.length) * 100) : 0;
+                    return { ...sub, topics: newTopics, progress };
                 });
             };
 
             const handleAddScore = (subjectId, score, date) => {
-                updateSubjectState(subjectId, (sub) => {
-                    const newHistory = [...(sub.scoreHistory || []), { score, date }];
-                    return { ...sub, scoreHistory: newHistory };
-                });
+                updateSubjectState(subjectId, (sub) => ({ ...sub, scoreHistory: [...sub.scoreHistory, { score, date }] }));
             };
 
             const handleDeleteScore = (subjectId, index) => {
-                 updateSubjectState(subjectId, (sub) => {
-                    const newHistory = [...sub.scoreHistory];
-                    newHistory.splice(index, 1);
-                    return { ...sub, scoreHistory: newHistory };
+                updateSubjectState(subjectId, (sub) => {
+                    const hist = [...sub.scoreHistory]; hist.splice(index, 1);
+                    return { ...sub, scoreHistory: hist };
                 });
             };
 
             const handleUpdateTarget = (subjectId, val) => {
-                updateSubjectState(subjectId, (sub) => {
-                     const numValue = val === '' ? 0 : parseInt(val);
-                     return { ...sub, targetScore: numValue };
-                });
-            };
-
-            const handleReset = () => {
-                if (confirm('ยืนยันรีเซ็ตข้อมูลทั้งหมด?')) {
-                    const freshData = createInitialData();
-                    setSubjects(freshData);
-                    localStorage.removeItem('dek71_local_backup');
-                    if (db) db.collection('dek71_data').doc('user_data').update({ subjects: freshData });
-                }
+                updateSubjectState(subjectId, (sub) => ({ ...sub, targetScore: val === '' ? 0 : parseInt(val) }));
             };
 
             return (
@@ -527,123 +474,81 @@
                             <div>
                                 <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
                                     <span className="bg-indigo-600 text-white p-2 rounded-lg"><Icons.Target /></span>
-                                    Dek71 Tracker
+                                    Dek71 Tracker (Mission Control V2)
                                 </h1>
-                                <div className="flex items-center gap-2 mt-2 ml-1">
-                                    <div className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-green-500' : (status.includes('syncing') ? 'bg-yellow-500 animate-pulse' : 'bg-red-500')}`}></div>
-                                    <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Deep Dive Analytics • {status}</p>
-                                </div>
+                                <p className="text-xs font-bold text-gray-400 mt-2">📊 ติดตามความพร้อมและสถิติคะแนนจำลองอย่างละเอียดเพื่อลูกรัก</p>
                             </div>
 
-                            <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-                                <div>
-                                    <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">Countdown To Exam</div>
-                                    <div className="text-xl font-bold text-indigo-700 flex items-center gap-2">
-                                        <Icons.Clock />
-                                        {timeLeft.days} วัน {timeLeft.hours} ชม.
+                            {/* แผงควบคุมตั้งค่าวันสอบแบบแยกส่วนงานอย่างอิสระ */}
+                            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                                <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
+                                    <div className="p-2 bg-orange-100 rounded-lg text-orange-600"><Icons.Clock /></div>
+                                    <div>
+                                        <div className="text-[10px] text-gray-400 font-bold uppercase">สอบวิชาเฉพาะ TPAT1</div>
+                                        <div className="text-md font-bold text-orange-600">{tpatCountdown.days} วันที่เหลือ</div>
+                                        {isEditingTpat ? (
+                                            <input type="date" value={tpatDateStr} onChange={(e) => { setTpatDateStr(e.target.value); saveState(subjects, e.target.value, alevelDateStr); }} onBlur={()=>setIsEditingTpat(false)} className="text-[10px] border p-0.5 rounded" autoFocus />
+                                        ) : (
+                                            <span onClick={()=>setIsEditingTpat(true)} className="text-[10px] text-gray-400 flex items-center gap-1 cursor-pointer hover:text-indigo-500">วันสอบ: {tpatDateStr} <Icons.Edit /></span>
+                                        )}
                                     </div>
-                                    {isEditingDate ? (
-                                        <input 
-                                            type="date" 
-                                            value={examDateStr} 
-                                            onChange={handleDateChange} 
-                                            onBlur={() => setIsEditingDate(false)}
-                                            className="text-xs border rounded p-1 mt-1"
-                                            autoFocus
-                                        />
-                                    ) : (
-                                        <div className="text-xs text-gray-400 flex items-center gap-1 cursor-pointer hover:text-indigo-500" onClick={() => setIsEditingDate(true)}>
-                                            Target: {new Date(examDateStr).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric'})} 
-                                            <Icons.Edit />
-                                        </div>
-                                    )}
                                 </div>
-                                <div className="h-10 w-px bg-gray-100 mx-2"></div>
-                                <button onClick={handleReset} className="text-gray-400 hover:text-red-500 text-xs flex flex-col items-center gap-1 transition-colors">
-                                    <Icons.Refresh /> Reset
-                                </button>
+
+                                <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
+                                    <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><Icons.Calendar /></div>
+                                    <div>
+                                        <div className="text-[10px] text-gray-400 font-bold uppercase">สอบวิชาสามัญ A-Level</div>
+                                        <div className="text-md font-bold text-blue-600">{alevelCountdown.days} วันที่เหลือ</div>
+                                        {isEditingAlevel ? (
+                                            <input type="date" value={alevelDateStr} onChange={(e) => { setAlevelDateStr(e.target.value); saveState(subjects, tpatDateStr, e.target.value); }} onBlur={()=>setIsEditingAlevel(false)} className="text-[10px] border p-0.5 rounded" autoFocus />
+                                        ) : (
+                                            <span onClick={()=>setIsEditingAlevel(true)} className="text-[10px] text-gray-400 flex items-center gap-1 cursor-pointer hover:text-indigo-500">วันสอบ: {alevelDateStr} <Icons.Edit /></span>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
-                                <div className="relative z-10">
-                                    <div className="text-sm font-medium opacity-90 mb-1">ความพร้อมรวม (Weighted Readiness)</div>
-                                    <div className="text-4xl font-bold">{totalReadiness.toFixed(2)}%</div>
-                                    <div className="w-full bg-black/20 rounded-full h-1.5 mt-3 overflow-hidden">
-                                        <div className="bg-white h-full rounded-full" style={{ width: `${totalReadiness}%` }}></div>
-                                    </div>
-                                </div>
-                                <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4">
-                                    <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+
+                        {/* การ์ดสถิติรวม */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg">
+                                <div className="text-sm font-medium opacity-90 mb-1">ความพร้อมรวมสะสม (Weighted Readiness)</div>
+                                <div className="text-4xl font-bold">{totalReadiness.toFixed(2)}%</div>
+                                <div className="w-full bg-black/20 rounded-full h-1.5 mt-3 overflow-hidden">
+                                    <div className="bg-white h-full" style={{ width: `${totalReadiness}%` }}></div>
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center justify-between relative overflow-hidden">
+                            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center justify-between">
                                 <div>
-                                    <div className="text-sm text-gray-500 font-medium mb-1 flex items-center gap-2">
-                                        <span className="text-orange-500"><Icons.Trophy /></span>
-                                        คะแนนเฉลี่ยล่าสุด (Avg. Score)
-                                    </div>
-                                    <div className="flex items-baseline gap-2">
-                                        <div className="text-4xl font-bold text-gray-800">{averageScore.toFixed(0)}</div>
-                                        <div className="text-sm text-gray-400">/ 100 คะแนน</div>
-                                    </div>
-                                    <div className="text-xs text-gray-400 mt-2">
-                                        จาก {subjects.filter(s => s.scoreHistory && s.scoreHistory.length > 0).length} วิชาที่มีประวัติคะแนน
-                                    </div>
-                                </div>
-                                <div className="flex items-end gap-1 h-12 w-32 justify-end">
-                                    {subjects.map(s => {
-                                        const score = getLatestScore(s);
-                                        return (
-                                            <div key={s.id} 
-                                                 className={`w-2 rounded-t-sm ${score > 0 ? s.color.replace('bg-', 'bg-') : 'bg-gray-100'}`} 
-                                                 style={{ height: `${score}%` }}
-                                                 title={`${s.name}: ${score}`}
-                                            ></div>
-                                        );
-                                    })}
+                                    <div className="text-sm text-gray-500 font-medium flex items-center gap-2"><span className="text-orange-500"><Icons.Trophy /></span> คะแนนรวมเฉลี่ยจากการจำลองข้อสอบ</div>
+                                    <div className="text-4xl font-bold text-gray-800 mt-1">{averageScore.toFixed(1)} <span className="text-sm font-normal text-gray-400">/100</span></div>
                                 </div>
                             </div>
                         </div>
                     </header>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pb-10">
+                    {/* ตารางแสดงผลรายวิชาทั้งหมด */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {subjects.map((sub) => {
-                            const latestScore = getLatestScore(sub);
+                            const latest = sub.scoreHistory && sub.scoreHistory.length > 0 ? sub.scoreHistory[sub.scoreHistory.length-1].score : 0;
                             return (
                                 <div 
                                     key={sub.id} 
                                     onClick={() => setSelectedSubject(sub)}
-                                    className="group bg-white rounded-xl shadow-sm border border-gray-100 p-5 cursor-pointer hover:shadow-lg hover:border-indigo-100 transition-all duration-300 relative overflow-hidden"
+                                    className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 cursor-pointer hover:shadow-md transition-all relative overflow-hidden"
                                 >
                                     <div className={`absolute bottom-0 left-0 h-1 ${sub.color}`} style={{ width: `${sub.progress}%` }}></div>
-
-                                    <div className="flex justify-between items-start mb-4">
+                                    <div className="flex justify-between items-start mb-2">
                                         <div className={`p-2 rounded-lg ${sub.color} bg-opacity-10 text-gray-700`}>
                                             {sub.icon === 'Target' ? <Icons.Target /> : sub.icon === 'Brain' ? <Icons.Brain /> : <Icons.Book />}
                                         </div>
-                                        <div className="text-right">
-                                            <div className="text-2xl font-bold text-gray-800">{sub.progress}%</div>
-                                            <div className="text-[10px] text-gray-400">Complete</div>
-                                        </div>
+                                        <span className="text-xl font-bold text-gray-700">{sub.progress}%</span>
                                     </div>
-
-                                    <h3 className="font-bold text-gray-800 mb-1">{sub.name}</h3>
-                                    
-                                    <div className="flex justify-between items-center mt-3 mb-3 bg-gray-50 p-2 rounded-lg">
-                                        <span className="text-xs text-gray-500">Latest Score:</span>
-                                        <span className={`text-sm font-bold ${latestScore >= sub.targetScore && latestScore > 0 ? 'text-green-600' : 'text-gray-700'}`}>
-                                            {latestScore || '-'}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-2 border-t border-gray-50 pt-2">
-                                        <Icons.Clock /> 
-                                        {sub.lastUpdated 
-                                            ? `Update: ${new Date(sub.lastUpdated).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'})}` 
-                                            : 'ยังไม่อัปเดต'}
+                                    <h3 className="font-bold text-gray-800">{sub.name}</h3>
+                                    <div className="flex justify-between items-center text-xs text-gray-500 mt-3 p-1.5 bg-gray-50 rounded">
+                                        <span>เป้าหมาย: {sub.targetScore || '-'}</span>
+                                        <span className="font-bold text-indigo-600">ทำได้จริง: {latest || '-'}</span>
                                     </div>
                                 </div>
                             );
@@ -655,6 +560,8 @@
                             subject={selectedSubject} 
                             onClose={() => setSelectedSubject(null)} 
                             onUpdateTopic={handleUpdateTopic}
+                            onAddCustomTopic={handleAddCustomTopic}
+                            onDeleteCustomTopic={handleDeleteCustomTopic}
                             onAddScore={handleAddScore}
                             onDeleteScore={handleDeleteScore}
                             onUpdateTarget={handleUpdateTarget}
@@ -664,18 +571,8 @@
             );
         };
 
-        try {
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(<Dek71Dashboard />);
-        } catch (error) {
-            document.getElementById('root').innerHTML = `
-                <div style="text-align: center; padding: 40px; color: #ef4444; font-family: sans-serif;">
-                    <h3 style="font-size: 20px; font-weight: bold;">⚠️ เกิดข้อผิดพลาดในการรันระบบ</h3>
-                    <p style="color: #6b7280; font-size: 14px;">${error.message}</p>
-                </div>
-            `;
-            console.error(error);
-        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Dek71Dashboard />);
     </script>
 </body>
 </html>
