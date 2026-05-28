@@ -32,7 +32,7 @@
     <!-- Root Container สำหรับ React App -->
     <div id="root" class="flex items-center justify-center min-h-screen text-gray-400">
         <div class="text-center animate-pulse">
-            <p class="text-xl font-bold" id="loading-text">กำลังเชื่อมต่อฐานข้อมูลความปลอดภัยเพื่อรุ่น 71...</p>
+            <p class="text-xl font-bold" id="loading-text">กำลังเชื่อมต่อฐานข้อมูลส่วนกลางเพื่อรุ่น 71...</p>
             <p class="text-sm mt-2">Dek71 Mission Control</p>
         </div>
     </div>
@@ -92,7 +92,7 @@
             math1: ["เซต & ตรรกศาสตร์", "จำนวนจริง", "ฟังก์ชัน", "เรขาคณิตวิเคราะห์ & ภาคตัดกรวย", "ฟังก์ชันเอกซ์โพ & ลอการิทึม", "ฟังก์ชันตรีโกณมิติ", "เมทริกซ์", "เวกเตอร์", "จำนวนเชิงซ้อน", "หลักการนับ & ความน่าจะเป็น", "ลำดับและอนุกรม", "แคลคูลัสเบื้องต้น", "สถิติและการแจกแจงความน่าจะเป็น"],
             phy: ["ธรรมชาติและพัฒนาการทางฟิสิกส์", "การเคลื่อนที่แนวตรง", "แรงและกฎการเคลื่อนที่", "สมดุลกล", "งานและพลังงาน", "โมเมนตัมและการชน", "การเคลื่อนที่แนวโค้ง", "การเคลื่อนที่แบบฮาร์มอนิกฯ", "คลื่น", "แสงเชิงคลื่น", "แสงเชิงรังสี", "เสียง", "ไฟฟ้าสถิต", "ไฟฟ้ากระแส", "แม่เหล็กและไฟฟ้า", "ความร้อนและแก๊ส", "ของแข็งและของไหล", "ฟิสิกส์อะตอม", "ฟิสิกส์นิวเคลียร์"],
             chem: ["ความปลอดภัยและทักษะฯ", "อะตอมและสมบัติของธาตุ", "พันธะเคมี", "โมลและสูตรเคมี", "สารละลาย", "ปริมาณสารสัมพันธ์", "แก๊สและสมบัติของแก๊ส", "อัตราการเกิดปฏิกิริยาเคมี", "สมดุลเคมี", "กรด-เบส", "เคมีไฟฟ้า", "เคมีอินทรีย์", "พอลิเมอร์", "เคมีกับการแก้ปัญหา"],
-            bio: ["ธรรมชาติของสิ่งมีชีวิต", "เคมีที่เป็นพื้นฐานของสิ่งมีชีวิต", "เซลล์และการทำงานของเซลล์", "ระบบย่อยอาหาร", "ระบบหายใจ", "ระบบหมุนเวียนเลือด", "ระบบภูมิคุ้มกัน", "ระบบขับถ่าย", "ระบบประสาทและอวัยวะรับความรู้สึก", "ระบบต่อมไร้ท่อ", "การเคลื่อนที่ของสิ่งมีชีวิต", "การสืบพันธุ์และการเจริญเติบโต", "พืช: โครงสร้างและหน้าที่", "พืช: การสังเคราะห์ด้วยแสง", "พืช: การสืบพันธุ์", "พันธุศาสตร์และวิวัฒนาการ", "ระบบนิเวศ"],
+            bio: ["ธรรมชาติของสิ่งมีชีวิต", "เคมีที่เป็นพื้นฐานของสิ่งมีชีวิต", "เซลล์และการทำงานของเซลล์", "ระบบย่อยอาหาร", "ระบบหายใจ", "ระบบหมุนเวียนเลือด", "ระบบภูมิคุ้มกัน", "ระบบขับถ่าย", "ระบบประสาท and อวัยวะรับความรู้สึก", "ระบบต่อมไร้ท่อ", "การเคลื่อนที่ของสิ่งมีชีวิต", "การสืบพันธุ์และการเจริญเติบโต", "พืช: โครงสร้างและหน้าที่", "พืช: การสังเคราะห์ด้วยแสง", "พืช: การสืบพันธุ์", "พันธุศาสตร์และวิวัฒนาการ", "ระบบนิเวศ"],
             eng: ["Vocabulary (3000 คำ)", "Reading: Advertisements/News", "Reading: Articles/Research", "Conversation: Daily life", "Conversation: Situational", "Grammar & Structure", "Writing: Paragraph Organization"],
             thai: ["หลักการใช้ภาษาไทย", "การอ่านจับใจความ", "การเขียนเพื่อการสื่อสาร", "วรรณคดีวิจารณ์"],
             soc: ["ศาสนา ศีลธรรม จริยธรรม", "หน้าที่พลเมือง", "เศรษฐศาสตร์", "ประวัติศาสตร์", "ภูมิศาสตร์"]
@@ -414,7 +414,7 @@
                 }
             }, []);
 
-            // 2. Data Fetching Listener (RULE 1 & RULE 3)
+            // 2. Data Fetching Listener (RULE 1 - ย้ายมาเป็นพิกัดคลาวด์ส่วนกลางร่วมกันข้ามเครื่อง)
             React.useEffect(() => {
                 // หากรันแบบ Local Storage (ไม่มี Firebase หรือเข้าสู่ระบบไม่ผ่าน)
                 if (!auth || !db || (currentUser && currentUser.isLocalFallback)) {
@@ -434,10 +434,10 @@
                 if (!currentUser) return; // Guard until auth complete
 
                 setStatus('online');
-                const userId = currentUser.uid;
                 
-                // สอดคล้องกับ Rule 1: artifacts/{appId}/users/{userId}/dek71_data
-                const docRef = db.collection('artifacts').doc(appId).collection('users').doc(userId).collection('dek71_data').doc('user_control_v2');
+                // ปรับแต่งตาม RULE 1: ใช้ Public Path แทนการใช้ userId ส่วนบุคคล
+                // เพื่อให้เปิดเครื่องอื่นที่ใช้ appId ตัวเดียวกันสามารถซิงค์และอัปเดตข้อมูลชุดเดียวกันได้แบบ Real-time
+                const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('user_control_v2');
                 
                 const unsubscribeSnapshot = docRef.onSnapshot((doc) => {
                     if (doc.exists) {
@@ -477,10 +477,9 @@
                 // บันทึกใส่ LocalStorage เสมอกันเหนียว
                 localStorage.setItem('dek71_local_v2', JSON.stringify({ subjects: updatedSubs, tpatDate: tpatD, alevelDate: alevelD }));
                 
-                // บันทึกลงระบบ Firestore ที่แยก UserID เรียบร้อย เฉพาะกรณีที่ต่อคลาวด์ผ่านจริง
+                // บันทึกลงระบบ Firestore เส้นทางส่วนกลางสาธารณะ (Public Path) ตาม RULE 1
                 if (db && currentUser && !currentUser.isLocalFallback) {
-                    const userId = currentUser.uid;
-                    db.collection('artifacts').doc(appId).collection('users').doc(userId).collection('dek71_data').doc('user_control_v2').set({ 
+                    db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('user_control_v2').set({ 
                         subjects: updatedSubs, 
                         tpatDate: tpatD, 
                         alevelDate: alevelD 
@@ -570,8 +569,7 @@
                 setSubjects(freshData);
                 localStorage.removeItem('dek71_local_v2');
                 if (db && currentUser && !currentUser.isLocalFallback) {
-                    const userId = currentUser.uid;
-                    db.collection('artifacts').doc(appId).collection('users').doc(userId).collection('dek71_data').doc('user_control_v2').set({ 
+                    db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('user_control_v2').set({ 
                         subjects: freshData, 
                         tpatDate: '2027-12-18', 
                         alevelDate: '2028-03-18' 
