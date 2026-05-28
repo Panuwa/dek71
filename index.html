@@ -5,14 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dek71 Mission Control: Deep Dive (Cloud Sync)</title>
     
+    <!-- React & Tailwind CSS via CDNJS -->
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- Google Fonts (Noto Sans Thai) -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Firebase Compat SDKs (App, Auth, Firestore) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <style>
@@ -25,31 +29,34 @@
     </style>
 </head>
 <body>
+    <!-- Root Container สำหรับ React App -->
     <div id="root" class="flex items-center justify-center min-h-screen text-gray-400">
         <div class="text-center animate-pulse">
-            <p class="text-xl font-bold" id="loading-text">กำลังโหลดส่วนประกอบระบบเพื่อรุ่น 71...</p>
+            <p class="text-xl font-bold" id="loading-text">กำลังเชื่อมต่อฐานข้อมูลความปลอดภัยเพื่อรุ่น 71...</p>
             <p class="text-sm mt-2">Dek71 Mission Control</p>
         </div>
     </div>
 
+    <!-- สคริปต์ฉุกเฉินกรณีเว็บค้างจาก Ad-blocker -->
     <script>
         setTimeout(function() {
             var root = document.getElementById('root');
-            if (root && root.innerHTML.includes('กำลังโหลดส่วนประกอบระบบ')) {
+            if (root && root.innerHTML.includes('กำลังเชื่อมต่อฐานข้อมูล')) {
                 root.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #ef4444; font-family: sans-serif;">
-                        <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">⚠️ เกิดข้อผิดพลาดในการโหลดระบบ (Timeout)</h3>
-                        <p style="color: #6b7280; font-size: 14px;">อาจเกิดจากอินเทอร์เน็ตมีปัญหา หรือถูกบล็อคด้วย Ad-blocker</p>
-                        <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">ลองรีเฟรชอีกครั้ง</button>
+                    <div style="text-align: center; padding: 40px; color: #ef4444; font-family: sans-serif; max-width: 500px; margin: auto;">
+                        <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">⚠️ ระบบแจ้งเตือนขัดข้อง</h3>
+                        <p style="color: #6b7280; font-size: 14px;">เครือข่ายบล็อกการเชื่อมต่อ Firebase หรือทรัพยากรโหลดไม่สมบูรณ์</p>
+                        <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">ลองเข้าสู่ระบบอีกครั้ง</button>
                     </div>
                 `;
             }
-        }, 6000);
+        }, 10000);
     </script>
 
+    <!-- React Application Logic -->
     <script type="text/babel">
         // ==========================================
-        // --- 1. FIREBASE CONFIGURATION ---
+        // --- 1. FIREBASE CONFIGURATION & INITIALIZATION ---
         // ==========================================
         const firebaseConfig = {
           apiKey: "AIzaSyDXQ9TIM1NbyR-PJNbVO74Cf_1w3hDWuGM",
@@ -62,22 +69,26 @@
         };
 
         let db = null;
+        let auth = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'dek71-mission-control';
+
         try {
             if (typeof firebase !== 'undefined') {
                 if (!firebase.apps.length) {
                     firebase.initializeApp(firebaseConfig);
                 }
                 db = firebase.firestore();
+                auth = firebase.auth();
             }
         } catch (e) {
-            console.error("Firebase Init Error:", e);
+            console.error("Firebase Initialization Error:", e);
         }
 
         // ==========================================
-        // --- 2. DATA ---
+        // --- 2. MASTER CURRICULUM DATA ---
         // ==========================================
         const MASTER_CURRICULUM = {
-            tpat1: ["เชาวน์ปัญญา (อนุกรม/มิติสัมพันธ์)", "จริยธรรมทางการแพทย์", "ความเชื่อมโยง (GAT ความคิดเชื่อมโยง)"],
+            tpat1: ["เชาวน์ปัญญา (อนุกรม/มิติสัมพันธ์)", "จริยธรรมทางการแพทย์", "ความเชื่อมโยง (GAT เชื่อมโยง)"],
             math1: ["เซต & ตรรกศาสตร์", "จำนวนจริง", "ฟังก์ชัน", "เรขาคณิตวิเคราะห์ & ภาคตัดกรวย", "ฟังก์ชันเอกซ์โพ & ลอการิทึม", "ฟังก์ชันตรีโกณมิติ", "เมทริกซ์", "เวกเตอร์", "จำนวนเชิงซ้อน", "หลักการนับ & ความน่าจะเป็น", "ลำดับและอนุกรม", "แคลคูลัสเบื้องต้น", "สถิติและการแจกแจงความน่าจะเป็น"],
             phy: ["ธรรมชาติและพัฒนาการทางฟิสิกส์", "การเคลื่อนที่แนวตรง", "แรงและกฎการเคลื่อนที่", "สมดุลกล", "งานและพลังงาน", "โมเมนตัมและการชน", "การเคลื่อนที่แนวโค้ง", "การเคลื่อนที่แบบฮาร์มอนิกฯ", "คลื่น", "แสงเชิงคลื่น", "แสงเชิงรังสี", "เสียง", "ไฟฟ้าสถิต", "ไฟฟ้ากระแส", "แม่เหล็กและไฟฟ้า", "ความร้อนและแก๊ส", "ของแข็งและของไหล", "ฟิสิกส์อะตอม", "ฟิสิกส์นิวเคลียร์"],
             chem: ["ความปลอดภัยและทักษะฯ", "อะตอมและสมบัติของธาตุ", "พันธะเคมี", "โมลและสูตรเคมี", "สารละลาย", "ปริมาณสารสัมพันธ์", "แก๊สและสมบัติของแก๊ส", "อัตราการเกิดปฏิกิริยาเคมี", "สมดุลเคมี", "กรด-เบส", "เคมีไฟฟ้า", "เคมีอินทรีย์", "พอลิเมอร์", "เคมีกับการแก้ปัญหา"],
@@ -102,12 +113,12 @@
             Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         };
 
-        // --- COMPONENTS ---
+        // --- PROGRESS CHART COMPONENT ---
         const ScoreChart = ({ history, targetScore }) => {
             if (!history || history.length < 2) return (
                 <div className="flex flex-col items-center justify-center h-32 bg-gray-50 rounded-lg border border-dashed border-gray-200 text-gray-400 text-xs">
                     <Icons.Trophy />
-                    <span className="mt-2">บันทึกคะแนนจำลองอย่างน้อย 2 ครั้งเพื่อดูพัฒนาการสถิติ</span>
+                    <span className="mt-2 text-center">บันทึกคะแนนสอบจำลองอย่างน้อย 2 ครั้งเพื่อวิเคราะห์สถิติกราฟแนวโน้ม</span>
                 </div>
             );
 
@@ -156,6 +167,7 @@
             );
         };
 
+        // --- SUBJECT MODAL COMPONENT (WITH DYNAMIC TOPICS & SCORES) ---
         const SubjectModal = ({ subject, onClose, onUpdateTopic, onAddCustomTopic, onDeleteCustomTopic, onAddScore, onDeleteScore, onUpdateTarget }) => {
             if (!subject) return null;
             const [newScore, setNewScore] = React.useState('');
@@ -163,31 +175,35 @@
             const [customTopicName, setCustomTopicName] = React.useState('');
 
             const handleAddScore = () => {
-                if (newScore === '') return;
+                if (newScore === '' || isNaN(newScore)) return;
                 onAddScore(subject.id, parseInt(newScore), newDate);
                 setNewScore('');
             };
 
-            const handleAddCustomTopic = (e) => {
+            const handleAddCustomTopicSubmit = (e) => {
                 e.preventDefault();
                 if (!customTopicName.trim()) return;
                 onAddCustomTopic(subject.id, customTopicName.trim());
                 setCustomTopicName('');
             };
 
+            const safeTopics = subject.topics || [];
+            const safeHistory = subject.scoreHistory || [];
+
             return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
                     <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] shadow-2xl z-10 flex flex-col slide-up overflow-hidden">
                         
+                        {/* Modal Header */}
                         <div className={`p-6 ${subject.color} bg-opacity-10 border-b border-gray-100 flex justify-between items-start`}>
                             <div className="flex gap-4">
                                 <div className={`p-3 rounded-xl ${subject.color} text-white shadow-sm`}>
-                                    {subject.icon === 'Target' ? <Icons.Target /> : subject.icon === 'Brain' ? <Icons.Brain /> : <Icons.Book />}
+                                    {subject.icon === 'Brain' ? <Icons.Brain /> : subject.icon === 'Target' ? <Icons.Target /> : <Icons.Book />}
                                 </div>
                                 <div>
                                     <h2 className="text-2xl font-bold text-gray-800">{subject.name}</h2>
-                                    <p className="text-sm text-gray-500 font-medium">น้ำหนักสัดส่วน: {subject.weight}% • ความคืบหน้าภาพรวม: {subject.progress}%</p>
+                                    <p className="text-sm text-gray-500 font-medium">สัดส่วนสถิติ: {subject.weight}% • ความคืบหน้าภาพรวม: {subject.progress}%</p>
                                 </div>
                             </div>
                             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
@@ -195,18 +211,19 @@
                             </button>
                         </div>
 
+                        {/* Modal Content */}
                         <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
-                            {/* ส่วนผลงานสถิติคะแนน */}
+                            {/* บันทึกคะแนนสอบจำลอง */}
                             <div className="mb-8 bg-gray-50 rounded-xl p-5 border border-gray-100">
                                 <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                    <Icons.Trophy /> บันทึกสถิติคะแนนสอบ (Mock Exam)
+                                    <Icons.Trophy /> แถบประเมินผลคะแนนสอบ (Mock Exam)
                                 </h3>
 
-                                <ScoreChart history={subject.scoreHistory} targetScore={subject.targetScore} />
+                                <ScoreChart history={safeHistory} strokeColor={subject.color} targetScore={subject.targetScore} />
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label className="text-xs text-gray-500 mb-2 block font-bold">🎯 ตั้งคะแนนเป้าหมาย (เต็ม 100)</label>
+                                        <label className="text-xs text-gray-500 mb-2 block font-bold">🎯 ตั้งเป้าหมายวิชานี้ (เต็ม 100)</label>
                                         <div className="flex items-center gap-2">
                                             <input 
                                                 type="number" 
@@ -218,7 +235,7 @@
                                         </div>
                                     </div>
                                     <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label className="text-xs text-gray-500 mb-2 block font-bold">📝 เพิ่มผลสอบจำลองล่าสุด</label>
+                                        <label className="text-xs text-gray-500 mb-2 block font-bold">📝 บันทึกผลสอบย่อย/จำลอง</label>
                                         <div className="flex gap-2">
                                             <input 
                                                 type="number" 
@@ -231,25 +248,25 @@
                                                 onClick={handleAddScore}
                                                 className="bg-gray-800 text-white text-xs px-4 rounded hover:bg-gray-900 flex items-center gap-1 shrink-0"
                                             >
-                                                <Icons.Plus /> เพิ่ม
+                                                <Icons.Plus /> เพิ่มคะแนน
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* ระบบเพิ่มหัวข้อ Dynamic Checklist */}
+                            {/* หัวข้อ Checklist & เพิ่ม Dynamic Checklist */}
                             <div className="mb-6">
                                 <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex justify-between items-center">
-                                    <span>หัวข้อบทเรียนและแผนปฎิบัติงาน ({subject.topics.length})</span>
+                                    <span>เช็คลิสต์เนื้อหาทั้งหมด ({safeTopics.length} บทเรียน)</span>
                                 </h3>
 
-                                <form onSubmit={handleAddCustomTopic} className="flex gap-2 mb-4">
+                                <form onSubmit={handleAddCustomTopicSubmit} className="flex gap-2 mb-4">
                                     <input 
                                         type="text" 
                                         value={customTopicName}
                                         onChange={(e) => setCustomTopicName(e.target.value)}
-                                        placeholder="➕ พิมพ์เพิ่มหัวข้อบทเรียนย่อยหรือ Checklist แผนงานของน้องได้ที่นี่..."
+                                        placeholder="➕ เพิ่มบทเรียนหรือแผนเตรียมตัวสำหรับน้องที่นี่..."
                                         className="flex-1 text-sm border border-gray-200 rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                                     />
                                     <button 
@@ -261,7 +278,7 @@
                                 </form>
 
                                 <div className="space-y-2">
-                                    {subject.topics.map((topic, index) => (
+                                    {safeTopics.map((topic, index) => (
                                         <div key={index} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-all group">
                                             <label className="flex items-center cursor-pointer flex-1 mr-4">
                                                 <div className="relative flex items-center">
@@ -280,23 +297,27 @@
                                                 </span>
                                             </label>
                                             
-                                            {/* ปุ่มลบกรณีหัวข้อตกหล่นหรืออยากเคลียร์ */}
                                             <button 
                                                 onClick={() => onDeleteCustomTopic(subject.id, index)}
                                                 className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                                                title="ลบหัวข้อนี้"
+                                                title="ลบหัวข้อบทเรียนนี้"
                                             >
                                                 <Icons.Trash />
                                             </button>
                                         </div>
                                     ))}
+                                    {safeTopics.length === 0 && (
+                                        <div className="text-center p-6 text-gray-400 text-sm border border-dashed rounded-lg">
+                                            ยังไม่มีหัวข้อบทเรียน กดสร้างด้านบนได้ทันทีครับ
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
                         <div className="p-4 border-t border-gray-100 bg-gray-50 text-right">
                             <button onClick={onClose} className="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium text-sm">
-                                บันทึกและปิดหน้าต่าง
+                                บันทึกและเสร็จสิ้น
                             </button>
                         </div>
                     </div>
@@ -304,14 +325,16 @@
             );
         };
 
+        // --- DASHBOARD APP COMPONENT ---
         const Dek71Dashboard = () => {
             const [subjects, setSubjects] = React.useState([]);
             const [totalReadiness, setTotalReadiness] = React.useState(0);
             const [averageScore, setAverageScore] = React.useState(0);
             const [selectedSubject, setSelectedSubject] = React.useState(null);
             const [status, setStatus] = React.useState('connecting'); 
+            const [currentUser, setCurrentUser] = React.useState(null);
             
-            // เพิ่มการแยกสถานะวันสอบของ TPAT1 และ A-Level ออกจากกันชัดเจน
+            // แยกสถานะเป้าหมายวันสอบ TPAT1 และ A-Level แยกกัน
             const [tpatDateStr, setTpatDateStr] = React.useState('2027-12-18'); 
             const [alevelDateStr, setAlevelDateStr] = React.useState('2028-03-18');
             const [isEditingTpat, setIsEditingTpat] = React.useState(false);
@@ -319,6 +342,9 @@
 
             const [tpatCountdown, setTpatCountdown] = React.useState({ days: 0 });
             const [alevelCountdown, setAlevelCountdown] = React.useState({ days: 0 });
+
+            // โมดอลยืนยันรีเซ็ตสถิติส่วนตัวแบบปลอดภัยไร้ alert/confirm native
+            const [showResetConfirm, setShowResetConfirm] = React.useState(false);
 
             const createInitialData = () => {
                 return [
@@ -339,10 +365,60 @@
                 }));
             };
 
-            // ดึงข้อมูลและ Sync ระบบคลาวด์
+            // แปลภาษาตัวแสดงสถานะของระบบเพื่อให้คุณพ่อเข้าใจง่ายและดูเป็นระเบียบ
+            const getStatusLabel = (statusStr) => {
+                if (statusStr === 'online') return 'คลาวด์ซิงค์เชื่อมต่อสมบูรณ์ (Online)';
+                if (statusStr.includes('syncing')) return 'กำลังซิงค์อัปเดตข้อมูล...';
+                if (statusStr.includes('offline')) return 'โหมดใช้งานบันทึกในเครื่อง (Offline Local)';
+                return statusStr;
+            };
+
+            // 1. One-time Init & Auth Listener (RULE 3 - มีระบบ Fallback ปลอดภัยหากไม่ได้เชื่อมคลาวด์)
             React.useEffect(() => {
-                if (!db) {
+                const initAuth = async () => {
+                    if (!auth) {
+                        setStatus('offline');
+                        return;
+                    }
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await auth.signInWithCustomToken(__initial_auth_token);
+                        } else {
+                            await auth.signInAnonymously();
+                        }
+                    } catch (err) {
+                        console.warn("Auth priority failed, falling back to local storage:", err);
+                        setStatus('offline (local-fallback)');
+                        
+                        // สร้างและกู้คืน Local Uid สำหรับใช้งานออฟไลน์
+                        let localUid = localStorage.getItem('dek71_local_uid');
+                        if (!localUid) {
+                            localUid = 'local-user-' + Math.random().toString(36).substring(2, 9);
+                            localStorage.setItem('dek71_local_uid', localUid);
+                        }
+                        setCurrentUser({ uid: localUid, isLocalFallback: true });
+                    }
+                };
+                
+                initAuth();
+                
+                if (auth) {
+                    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+                        if (user) {
+                            setCurrentUser(user);
+                        }
+                    });
+                    return () => unsubscribeAuth();
+                } else {
                     setStatus('offline');
+                }
+            }, []);
+
+            // 2. Data Fetching Listener (RULE 1 & RULE 3)
+            React.useEffect(() => {
+                // หากรันแบบ Local Storage (ไม่มี Firebase หรือเข้าสู่ระบบไม่ผ่าน)
+                if (!auth || !db || (currentUser && currentUser.isLocalFallback)) {
+                    setStatus('offline (local)');
                     const savedData = localStorage.getItem('dek71_local_v2');
                     if (savedData) {
                         const parsed = JSON.parse(savedData);
@@ -354,9 +430,16 @@
                     }
                     return;
                 }
+
+                if (!currentUser) return; // Guard until auth complete
+
+                setStatus('online');
+                const userId = currentUser.uid;
                 
-                const docRef = db.collection('dek71_data').doc('user_control_v2');
-                const unsubscribe = docRef.onSnapshot((doc) => {
+                // สอดคล้องกับ Rule 1: artifacts/{appId}/users/{userId}/dek71_data
+                const docRef = db.collection('artifacts').doc(appId).collection('users').doc(userId).collection('dek71_data').doc('user_control_v2');
+                
+                const unsubscribeSnapshot = docRef.onSnapshot((doc) => {
                     if (doc.exists) {
                         const data = doc.data();
                         setSubjects(data.subjects || createInitialData());
@@ -367,17 +450,17 @@
                         docRef.set({ subjects: initialData, tpatDate: '2027-12-18', alevelDate: '2028-03-18' });
                         setSubjects(initialData);
                     }
-                    setStatus('online');
                 }, (err) => {
+                    console.error("Snapshot read permission error:", err);
                     setStatus('offline (error)');
                     const savedData = localStorage.getItem('dek71_local_v2');
                     if (savedData) setSubjects(JSON.parse(savedData).subjects);
                 });
-                
-                return () => unsubscribe();
-            }, []);
 
-            // ตัวนับถอยหลังแยกงานสอบความถี่ Real-time
+                return () => unsubscribeSnapshot();
+            }, [currentUser]);
+
+            // ตัวคำนวณเวลานับถอยหลังแยก
             React.useEffect(() => {
                 const timer = setInterval(() => {
                     const calculateDays = (dateStr) => {
@@ -391,13 +474,21 @@
             }, [tpatDateStr, alevelDateStr]);
 
             const saveState = (updatedSubs, tpatD = tpatDateStr, alevelD = alevelDateStr) => {
+                // บันทึกใส่ LocalStorage เสมอกันเหนียว
                 localStorage.setItem('dek71_local_v2', JSON.stringify({ subjects: updatedSubs, tpatDate: tpatD, alevelDate: alevelD }));
-                if (db) {
-                    db.collection('dek71_data').doc('user_control_v2').set({ subjects: updatedSubs, tpatDate: tpatD, alevelDate: alevelD }).catch(e => console.error(e));
+                
+                // บันทึกลงระบบ Firestore ที่แยก UserID เรียบร้อย เฉพาะกรณีที่ต่อคลาวด์ผ่านจริง
+                if (db && currentUser && !currentUser.isLocalFallback) {
+                    const userId = currentUser.uid;
+                    db.collection('artifacts').doc(appId).collection('users').doc(userId).collection('dek71_data').doc('user_control_v2').set({ 
+                        subjects: updatedSubs, 
+                        tpatDate: tpatD, 
+                        alevelDate: alevelD 
+                    }).catch(e => console.error("Firestore write aborted:", e));
                 }
             };
 
-            // อัปเดตข้อมูลวิชาการคำนวณถ่วงน้ำหนักความพร้อม
+            // อัปเดตข้อมูลวิชาการคำนวณความคืบหน้าสะสมถ่วงน้ำหนัก
             React.useEffect(() => {
                 if (subjects.length > 0) {
                     const weightedScore = subjects.reduce((acc, sub) => acc + (sub.progress * sub.weight / 100), 0);
@@ -425,46 +516,70 @@
                 saveState(newSubjects);
             };
 
-            // จัดการข้อมูล Checklist
+            // ฟังก์ชันคลิก Checkbox อัปเดตหัวข้อและ % แถบพลัง
             const handleUpdateTopic = (subjectId, topicIndex) => {
                 updateSubjectState(subjectId, (sub) => {
-                    const newTopics = sub.topics.map((t, i) => i === topicIndex ? { ...t, completed: !t.completed } : t);
-                    const progress = Math.round((newTopics.filter(t => t.completed).length / newTopics.length) * 100);
+                    const currentTopics = sub.topics || [];
+                    const newTopics = currentTopics.map((t, i) => i === topicIndex ? { ...t, completed: !t.completed } : t);
+                    const progress = newTopics.length > 0 ? Math.round((newTopics.filter(t => t.completed).length / newTopics.length) * 100) : 0;
                     return { ...sub, topics: newTopics, progress };
                 });
             };
 
-            // ฟังก์ชันเพิ่มหัวข้อกำหนดเองลงในวิชา
+            // ฟังก์ชันพิมพ์หัวข้อเพิ่มเองลงในบทเรียนย่อย
             const handleAddCustomTopic = (subjectId, topicName) => {
                 updateSubjectState(subjectId, (sub) => {
-                    const newTopics = [...sub.topics, { name: topicName, completed: false }];
-                    const progress = Math.round((newTopics.filter(t => t.completed).length / newTopics.length) * 100);
+                    const currentTopics = sub.topics || [];
+                    const newTopics = [...currentTopics, { name: topicName, completed: false }];
+                    const progress = newTopics.length > 0 ? Math.round((newTopics.filter(t => t.completed).length / newTopics.length) * 100) : 0;
                     return { ...sub, topics: newTopics, progress };
                 });
             };
 
-            // ฟังก์ชันลบหัวข้อกรณีต้องการคัดแยกงานออก
+            // ฟังก์ชันลบหัวข้อออกแบบไดนามิก
             const handleDeleteCustomTopic = (subjectId, topicIndex) => {
                 updateSubjectState(subjectId, (sub) => {
-                    const newTopics = sub.topics.filter((_, i) => i !== topicIndex);
+                    const currentTopics = sub.topics || [];
+                    const newTopics = currentTopics.filter((_, i) => i !== topicIndex);
                     const progress = newTopics.length > 0 ? Math.round((newTopics.filter(t => t.completed).length / newTopics.length) * 100) : 0;
                     return { ...sub, topics: newTopics, progress };
                 });
             };
 
             const handleAddScore = (subjectId, score, date) => {
-                updateSubjectState(subjectId, (sub) => ({ ...sub, scoreHistory: [...sub.scoreHistory, { score, date }] }));
+                updateSubjectState(subjectId, (sub) => {
+                    const safeHistory = sub.scoreHistory || [];
+                    return { ...sub, scoreHistory: [...safeHistory, { score, date }] };
+                });
             };
 
             const handleDeleteScore = (subjectId, index) => {
                 updateSubjectState(subjectId, (sub) => {
-                    const hist = [...sub.scoreHistory]; hist.splice(index, 1);
-                    return { ...sub, scoreHistory: hist };
+                    const safeHistory = [...(sub.scoreHistory || [])];
+                    safeHistory.splice(index, 1);
+                    return { ...sub, scoreHistory: safeHistory };
                 });
             };
 
             const handleUpdateTarget = (subjectId, val) => {
                 updateSubjectState(subjectId, (sub) => ({ ...sub, targetScore: val === '' ? 0 : parseInt(val) }));
+            };
+
+            const handleConfirmReset = () => {
+                const freshData = createInitialData();
+                setSubjects(freshData);
+                localStorage.removeItem('dek71_local_v2');
+                if (db && currentUser && !currentUser.isLocalFallback) {
+                    const userId = currentUser.uid;
+                    db.collection('artifacts').doc(appId).collection('users').doc(userId).collection('dek71_data').doc('user_control_v2').set({ 
+                        subjects: freshData, 
+                        tpatDate: '2027-12-18', 
+                        alevelDate: '2028-03-18' 
+                    });
+                }
+                setTpatDateStr('2027-12-18');
+                setAlevelDateStr('2028-03-18');
+                setShowResetConfirm(false);
             };
 
             return (
@@ -474,12 +589,15 @@
                             <div>
                                 <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
                                     <span className="bg-indigo-600 text-white p-2 rounded-lg"><Icons.Target /></span>
-                                    Dek71 Tracker (Mission Control V2)
+                                    Dek71 Tracker (Mission Control v2.5)
                                 </h1>
-                                <p className="text-xs font-bold text-gray-400 mt-2">📊 ติดตามความพร้อมและสถิติคะแนนจำลองอย่างละเอียดเพื่อลูกรัก</p>
+                                <div className="flex items-center gap-2 mt-2 ml-1">
+                                    <div className={`w-2.5 h-2.5 rounded-full ${status === 'online' ? 'bg-green-500' : (status.includes('syncing') ? 'bg-yellow-500 animate-pulse' : 'bg-orange-500')}`}></div>
+                                    <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">{getStatusLabel(status)}</p>
+                                </div>
                             </div>
 
-                            {/* แผงควบคุมตั้งค่าวันสอบแบบแยกส่วนงานอย่างอิสระ */}
+                            {/* แผงควบคุมกำหนดวันสอบ (TPAT1 & A-Level) */}
                             <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                                 <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
                                     <div className="p-2 bg-orange-100 rounded-lg text-orange-600"><Icons.Clock /></div>
@@ -487,7 +605,14 @@
                                         <div className="text-[10px] text-gray-400 font-bold uppercase">สอบวิชาเฉพาะ TPAT1</div>
                                         <div className="text-md font-bold text-orange-600">{tpatCountdown.days} วันที่เหลือ</div>
                                         {isEditingTpat ? (
-                                            <input type="date" value={tpatDateStr} onChange={(e) => { setTpatDateStr(e.target.value); saveState(subjects, e.target.value, alevelDateStr); }} onBlur={()=>setIsEditingTpat(false)} className="text-[10px] border p-0.5 rounded" autoFocus />
+                                            <input 
+                                                type="date" 
+                                                value={tpatDateStr} 
+                                                onChange={(e) => { setTpatDateStr(e.target.value); saveState(subjects, e.target.value, alevelDateStr); }} 
+                                                onBlur={()=>setIsEditingTpat(false)} 
+                                                className="text-[10px] border p-0.5 rounded" 
+                                                autoFocus 
+                                            />
                                         ) : (
                                             <span onClick={()=>setIsEditingTpat(true)} className="text-[10px] text-gray-400 flex items-center gap-1 cursor-pointer hover:text-indigo-500">วันสอบ: {tpatDateStr} <Icons.Edit /></span>
                                         )}
@@ -500,7 +625,14 @@
                                         <div className="text-[10px] text-gray-400 font-bold uppercase">สอบวิชาสามัญ A-Level</div>
                                         <div className="text-md font-bold text-blue-600">{alevelCountdown.days} วันที่เหลือ</div>
                                         {isEditingAlevel ? (
-                                            <input type="date" value={alevelDateStr} onChange={(e) => { setAlevelDateStr(e.target.value); saveState(subjects, tpatDateStr, e.target.value); }} onBlur={()=>setIsEditingAlevel(false)} className="text-[10px] border p-0.5 rounded" autoFocus />
+                                            <input 
+                                                type="date" 
+                                                value={alevelDateStr} 
+                                                onChange={(e) => { setAlevelDateStr(e.target.value); saveState(subjects, tpatDateStr, e.target.value); }} 
+                                                onBlur={()=>setIsEditingAlevel(false)} 
+                                                className="text-[10px] border p-0.5 rounded" 
+                                                autoFocus 
+                                            />
                                         ) : (
                                             <span onClick={()=>setIsEditingAlevel(true)} className="text-[10px] text-gray-400 flex items-center gap-1 cursor-pointer hover:text-indigo-500">วันสอบ: {alevelDateStr} <Icons.Edit /></span>
                                         )}
@@ -509,26 +641,34 @@
                             </div>
                         </div>
 
-                        {/* การ์ดสถิติรวม */}
+                        {/* แผงข้อมูลภาพรวม (Total Stats) */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg">
-                                <div className="text-sm font-medium opacity-90 mb-1">ความพร้อมรวมสะสม (Weighted Readiness)</div>
-                                <div className="text-4xl font-bold">{totalReadiness.toFixed(2)}%</div>
-                                <div className="w-full bg-black/20 rounded-full h-1.5 mt-3 overflow-hidden">
-                                    <div className="bg-white h-full" style={{ width: `${totalReadiness}%` }}></div>
+                            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
+                                <div className="relative z-10">
+                                    <div className="text-sm font-medium opacity-90 mb-1">ความพร้อมภาพรวมถ่วงน้ำหนัก (Weighted Readiness)</div>
+                                    <div className="text-4xl font-bold">{totalReadiness.toFixed(2)}%</div>
+                                    <div className="w-full bg-black/20 rounded-full h-1.5 mt-3 overflow-hidden">
+                                        <div className="bg-white h-full" style={{ width: `${totalReadiness}%` }}></div>
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center justify-between">
                                 <div>
-                                    <div className="text-sm text-gray-500 font-medium flex items-center gap-2"><span className="text-orange-500"><Icons.Trophy /></span> คะแนนรวมเฉลี่ยจากการจำลองข้อสอบ</div>
+                                    <div className="text-sm text-gray-500 font-medium flex items-center gap-2"><span className="text-orange-500"><Icons.Trophy /></span> สถิติเฉลี่ยจำลองล่าสุด (Mock Avg)</div>
                                     <div className="text-4xl font-bold text-gray-800 mt-1">{averageScore.toFixed(1)} <span className="text-sm font-normal text-gray-400">/100</span></div>
                                 </div>
+                                <button 
+                                    onClick={() => setShowResetConfirm(true)} 
+                                    className="bg-red-50 hover:bg-red-100 text-red-600 text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors font-semibold"
+                                >
+                                    <Icons.Refresh /> ล้างข้อมูลทั้งหมด
+                                </button>
                             </div>
                         </div>
                     </header>
 
-                    {/* ตารางแสดงผลรายวิชาทั้งหมด */}
+                    {/* รายวิชาสอบทั้งหมด */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {subjects.map((sub) => {
                             const latest = sub.scoreHistory && sub.scoreHistory.length > 0 ? sub.scoreHistory[sub.scoreHistory.length-1].score : 0;
@@ -536,25 +676,26 @@
                                 <div 
                                     key={sub.id} 
                                     onClick={() => setSelectedSubject(sub)}
-                                    className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 cursor-pointer hover:shadow-md transition-all relative overflow-hidden"
+                                    className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 cursor-pointer hover:shadow-md transition-all relative overflow-hidden group"
                                 >
                                     <div className={`absolute bottom-0 left-0 h-1 ${sub.color}`} style={{ width: `${sub.progress}%` }}></div>
                                     <div className="flex justify-between items-start mb-2">
                                         <div className={`p-2 rounded-lg ${sub.color} bg-opacity-10 text-gray-700`}>
-                                            {sub.icon === 'Target' ? <Icons.Target /> : sub.icon === 'Brain' ? <Icons.Brain /> : <Icons.Book />}
+                                            {sub.icon === 'Brain' ? <Icons.Brain /> : sub.icon === 'Target' ? <Icons.Target /> : <Icons.Book />}
                                         </div>
                                         <span className="text-xl font-bold text-gray-700">{sub.progress}%</span>
                                     </div>
-                                    <h3 className="font-bold text-gray-800">{sub.name}</h3>
+                                    <h3 className="font-bold text-gray-800 mb-1">{sub.name}</h3>
                                     <div className="flex justify-between items-center text-xs text-gray-500 mt-3 p-1.5 bg-gray-50 rounded">
                                         <span>เป้าหมาย: {sub.targetScore || '-'}</span>
-                                        <span className="font-bold text-indigo-600">ทำได้จริง: {latest || '-'}</span>
+                                        <span className="font-bold text-indigo-600">ทำจริง: {latest || '-'}</span>
                                     </div>
                                 </div>
                             );
                         })}
                     </div>
 
+                    {/* รายวิชา Modal */}
                     {selectedSubject && (
                         <SubjectModal 
                             subject={selectedSubject} 
@@ -566,6 +707,36 @@
                             onDeleteScore={handleDeleteScore}
                             onUpdateTarget={handleUpdateTarget}
                         />
+                    )}
+
+                    {/* โมดอลยืนยันรีเซ็ต (Sleek HTML/Tailwind Confirm Modal) */}
+                    {showResetConfirm && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowResetConfirm(false)}></div>
+                            <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl z-10 text-center animate-slideUp">
+                                <div className="text-red-500 flex justify-center mb-4">
+                                    <div className="bg-red-100 p-3 rounded-full">
+                                        <Icons.Trash />
+                                    </div>
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-800 mb-2">ยืนยันการเริ่มระบบใหม่?</h3>
+                                <p className="text-sm text-gray-500 mb-6">ความคืบหน้าสะสม สถิติคะแนนทั้งหมด และตารางเป้าหมายของน้องจะถูกเคลียร์ล้างทั้งหมดเป็นศูนย์และไม่สามารถย้อนคืนกลับมาได้</p>
+                                <div className="flex gap-3">
+                                    <button 
+                                        onClick={() => setShowResetConfirm(false)} 
+                                        className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg text-sm transition-colors"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button 
+                                        onClick={handleConfirmReset} 
+                                        className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm transition-colors"
+                                    >
+                                        ยืนยันล้างระบบ
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </div>
             );
