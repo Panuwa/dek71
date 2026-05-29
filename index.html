@@ -68,7 +68,7 @@
           measurementId: "G-YDCNM0C1FR"
         };
 
-        // 🌟 คุณพ่อสามารถแก้ไขอีเมล Admin หลักของตัวเองได้ที่นี่ครับ 🌟
+        // 🌟 บังคับใช้อีเมล Admin หลักเป็นพิมพ์เล็กเสมอเพื่อป้องกันความสับสน 🌟
         const ADMIN_EMAIL = "family71@gmail.com";
 
         let db = null;
@@ -177,7 +177,9 @@
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 setError('');
-                if (!email || !password) {
+                const cleanEmail = email.trim().toLowerCase();
+
+                if (!cleanEmail || !password) {
                     setError('กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วนครับ');
                     return;
                 }
@@ -189,19 +191,19 @@
                 setLoading(true);
                 try {
                     if (isRegister) {
-                        const userCredential = await auth.createUserWithEmailAndPassword(email.trim(), password);
+                        const userCredential = await auth.createUserWithEmailAndPassword(cleanEmail, password);
                         const user = userCredential.user;
                         
-                        // ปูระบบเขียนเอกสารขอคำร้องทันทีตั้งแต่สมัคร ป้องกันฐานข้อมูลคัดกรองข้ามเครื่องหล่นหาย
+                        // ปูระบบเขียนเอกสารขอคำร้องทันทีเมื่อสร้างไอดีสำเร็จ
                         if (db) {
                             await db.collection('user_approvals').doc(user.uid).set({
-                                email: user.email.trim(),
-                                approved: user.email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase(),
+                                email: cleanEmail,
+                                approved: cleanEmail === ADMIN_EMAIL,
                                 registeredAt: firebase.firestore.FieldValue.serverTimestamp()
                             });
                         }
                     } else {
-                        await auth.signInWithEmailAndPassword(email.trim(), password);
+                        await auth.signInWithEmailAndPassword(cleanEmail, password);
                     }
                 } catch (err) {
                     console.error("Auth error:", err);
@@ -495,19 +497,21 @@
         const AdminPanelModal = ({ onClose }) => {
             const [usersList, setUsersList] = React.useState([]);
             const [loading, setLoading] = React.useState(true);
+            const [queryError, setQueryError] = React.useState('');
 
             React.useEffect(() => {
                 if (!db) return;
                 
-                // ถอดคำสั่ง Query OrderBy เพื่อดึงทุกรายชื่อสมัครใหม่ขึ้นมา 100% ไร้ตกหล่น
+                // ดึงข้อมูลแบบ Real-time พร้อมรับฟัง Error หากติดกฎความปลอดภัย
                 const unsubscribe = db.collection('user_approvals')
                     .onSnapshot((snapshot) => {
+                        setQueryError('');
                         const users = [];
                         snapshot.forEach((doc) => {
                             users.push({ id: doc.id, ...doc.data() });
                         });
                         
-                        // เรียงลำดับข้อมูลด้วยระบบ JavaScript บนเบราว์เซอร์ เพื่อความแม่นยำสูง
+                        // เรียงลำดับข้อมูลด้วยระบบ JavaScript
                         users.sort((a, b) => {
                             const dateA = a.registeredAt ? (a.registeredAt.seconds || new Date(a.registeredAt).getTime()) : 0;
                             const dateB = b.registeredAt ? (b.registeredAt.seconds || new Date(b.registeredAt).getTime()) : 0;
@@ -518,6 +522,7 @@
                         setLoading(false);
                     }, (err) => {
                         console.error("Fetch approval lists failed: ", err);
+                        setQueryError(err.message || 'Permission Denied: ไม่ได้รับสิทธิ์การดึงข้อมูลจากระบบคลาวด์');
                         setLoading(false);
                     });
                 return () => unsubscribe();
@@ -558,6 +563,14 @@
                         </div>
 
                         <div className="p-6 max-h-[60vh] overflow-y-auto scrollbar-hide">
+                            {queryError && (
+                                <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded-r-xl">
+                                    <p className="font-bold">⚠️ ตรวจพบข้อผิดพลาดด้านสิทธิ์ความปลอดภัยคลาวด์:</p>
+                                    <p className="mt-1 font-mono">{queryError}</p>
+                                    <p className="mt-2 text-gray-500">แนะนำให้คุณพ่อปรับปรุงกฎ (Firestore Rules) ในหน้าเว็บจัดการ Firebase ตามคู่มือด้านล่างเพื่อให้ระบบยอมรับการดึงข้อมูลครับ</p>
+                                </div>
+                            )}
+
                             {loading ? (
                                 <div className="text-center p-8 text-gray-500">กำลังโหลดรายชื่อ...</div>
                             ) : usersList.length === 0 ? (
@@ -566,8 +579,8 @@
                                 <div className="space-y-4">
                                     {usersList.map((user) => (
                                         <div key={user.id} className="flex items-center justify-between p-4 bg-slate-50 border border-gray-100 rounded-xl">
-                                            <div>
-                                                <p className="text-sm font-semibold text-gray-800">{user.email}</p>
+                                            <div className="mr-4 overflow-hidden">
+                                                <p className="text-sm font-semibold text-gray-800 truncate">{user.email}</p>
                                                 <p className="text-[10px] text-gray-400 font-mono mt-0.5">UID: {user.id}</p>
                                                 <p className="text-[11px] mt-1 flex items-center gap-1.5">
                                                     สถานะปัจจุบัน: 
@@ -579,7 +592,7 @@
                                                 </p>
                                             </div>
 
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 shrink-0">
                                                 <button
                                                     onClick={() => handleToggleApproval(user.id, user.approved)}
                                                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-colors ${
@@ -683,14 +696,16 @@
             React.useEffect(() => {
                 if (authLoading || !currentUser || !db) return;
 
+                const userEmail = currentUser.email ? currentUser.email.toLowerCase() : '';
+
                 // กรณีล็อกอินด้วยบัญชีแอดมิน (คุณพ่อ) - ปลดล็อกอัตโนมัติ
-                if (currentUser.email === ADMIN_EMAIL) {
+                if (userEmail === ADMIN_EMAIL) {
                     setIsApproved(true);
                     setAuthLoading(false);
                     
                     // บันทึก/อัปเดตสถานะแอดมินลงในตารางสิทธิ์
                     db.collection('user_approvals').doc(currentUser.uid).set({
-                        email: currentUser.email,
+                        email: userEmail,
                         approved: true,
                         registeredAt: firebase.firestore.FieldValue.serverTimestamp()
                     }, { merge: true });
@@ -705,12 +720,7 @@
                         const data = doc.data();
                         setIsApproved(data.approved === true);
                     } else {
-                        // หากเป็นผู้ใช้ใหม่เอี่ยม สร้างเอกสารคำร้องคัดกรองรอคุณพ่อกดอนุมัติ
-                        approvalDocRef.set({
-                            email: currentUser.email,
-                            approved: false,
-                            registeredAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
+                        // ไม่บันทึกซ้ำซ้อนในหน้านี้ ป้องกัน Race Condition ให้รอฟังอย่างเดียว
                         setIsApproved(false);
                     }
                     setAuthLoading(false);
@@ -897,7 +907,8 @@
                 return <WaitingApprovalScreen email={currentUser.email} onSignOut={handleSignOut} />;
             }
 
-            const isAdmin = currentUser.email === ADMIN_EMAIL;
+            const userEmail = currentUser.email ? currentUser.email.toLowerCase() : '';
+            const isAdmin = userEmail === ADMIN_EMAIL;
 
             return (
                 <div className="max-w-6xl mx-auto p-4 md:p-8 min-h-screen">
