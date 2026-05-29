@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dek71 Mission Control: Shared Family Tracker & Live Logs</title>
+    <title>Dek71 Mission Control: Deep Dive (Cloud Sync with Admin Approval)</title>
     
     <!-- React & Tailwind CSS via CDNJS -->
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
@@ -29,9 +29,10 @@
     </style>
 </head>
 <body>
+    <!-- Root Container สำหรับ React App -->
     <div id="root" class="flex items-center justify-center min-h-screen text-gray-400">
         <div class="text-center animate-pulse">
-            <p class="text-xl font-bold" id="loading-text">กำลังประสานงานฐานข้อมูลครอบครัว 71 Shared Cloud...</p>
+            <p class="text-xl font-bold" id="loading-text">กำลังเชื่อมต่อฐานข้อมูลความปลอดภัยส่วนกลาง...</p>
             <p class="text-sm mt-2">Dek71 Mission Control</p>
         </div>
     </div>
@@ -40,12 +41,12 @@
     <script>
         setTimeout(function() {
             var root = document.getElementById('root');
-            if (root && root.innerHTML.includes('กำลังประสานงาน')) {
+            if (root && root.innerHTML.includes('กำลังเชื่อมต่อฐานข้อมูล')) {
                 root.innerHTML = `
                     <div style="text-align: center; padding: 40px; color: #ef4444; font-family: sans-serif; max-width: 500px; margin: auto;">
-                        <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">⚠️ ตรวจพบระบบความปลอดภัยขัดข้อง</h3>
-                        <p style="color: #6b7280; font-size: 14px;">เครือข่ายบล็อกการเชื่อมต่อ Firebase หรือทรัพยากรดาวน์โหลดไม่เสร็จสิ้น</p>
-                        <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">ลองเข้าสู่ระบบใหม่อีกครั้ง</button>
+                        <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">⚠️ ระบบแจ้งเตือนขัดข้อง</h3>
+                        <p style="color: #6b7280; font-size: 14px;">เครือข่ายบล็อกการเชื่อมต่อ Firebase หรือทรัพยากรโหลดไม่สมบูรณ์</p>
+                        <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">ลองเข้าสู่ระบบอีกครั้ง</button>
                     </div>
                 `;
             }
@@ -54,6 +55,9 @@
 
     <!-- React Application Logic -->
     <script type="text/babel">
+        // ==========================================
+        // --- 1. FIREBASE CONFIGURATION & INITIALIZATION ---
+        // ==========================================
         const firebaseConfig = {
           apiKey: "AIzaSyDXQ9TIM1NbyR-PJNbVO74Cf_1w3hDWuGM",
           authDomain: "dek71-8af86.firebaseapp.com",
@@ -82,6 +86,9 @@
             console.error("Firebase Initialization Error:", e);
         }
 
+        // ==========================================
+        // --- 2. MASTER CURRICULUM DATA ---
+        // ==========================================
         const MASTER_CURRICULUM = {
             tpat1: ["เชาวน์ปัญญา (อนุกรม/มิติสัมพันธ์)", "จริยธรรมทางการแพทย์", "ความเชื่อมโยง (GAT เชื่อมโยง)"],
             math1: ["เซต & ตรรกศาสตร์", "จำนวนจริง", "ฟังก์ชัน", "เรขาคณิตวิเคราะห์ & ภาคตัดกรวย", "ฟังก์ชันเอกซ์โพ & ลอการิทึม", "ฟังก์ชันตรีโกณมิติ", "เมทริกซ์", "เวกเตอร์", "จำนวนเชิงซ้อน", "หลักการนับ & ความน่าจะเป็น", "ลำดับและอนุกรม", "แคลคูลัสเบื้องต้น", "สถิติและการแจกแจงความน่าจะเป็น"],
@@ -110,10 +117,10 @@
             User: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
             Lock: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
             Shield: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
-            Alert: () => <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
-            History: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/><line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="16" y2="14"/></svg>
+            Alert: () => <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         };
 
+        // --- PROGRESS CHART COMPONENT ---
         const ScoreChart = ({ history, targetScore }) => {
             if (!history || history.length < 2) return (
                 <div className="flex flex-col items-center justify-center h-32 bg-gray-50 rounded-lg border border-dashed border-gray-200 text-gray-400 text-xs">
@@ -159,7 +166,8 @@
             );
         };
 
-        const LoginScreen = () => {
+        // --- LOGIN SCREEN (WITH SECURE REGISTRATION WRITE) ---
+        const LoginScreen = ({ onLoginSuccess }) => {
             const [isRegister, setIsRegister] = React.useState(false);
             const [email, setEmail] = React.useState('');
             const [password, setPassword] = React.useState('');
@@ -186,7 +194,7 @@
                         const userCredential = await auth.createUserWithEmailAndPassword(cleanEmail, password);
                         const user = userCredential.user;
                         
-                        // สร้างใบคำร้องขออนุมัติในระบบ Firestore ทันที
+                        // ปูระบบเขียนเอกสารขอคำร้องทันทีเมื่อสร้างไอดีสำเร็จ
                         if (db) {
                             await db.collection('user_approvals').doc(user.uid).set({
                                 email: cleanEmail,
@@ -200,7 +208,7 @@
                 } catch (err) {
                     console.error("Auth error:", err);
                     if (err.code === 'auth/user-not-found') {
-                        setError('ไม่พบผู้ใช้งานนี้ในระบบ กรุณาตรวจสอบอีเมลหรือเลือกสมัครใช้งานครับ');
+                        setError('ไม่พบผู้ใช้งานนี้ในระบบ กรุณาตรวจสอบอีเมลหรือเลือกแท็บสมัครใช้งานครับ');
                     } else if (err.code === 'auth/wrong-password') {
                         setError('รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้งครับ');
                     } else if (err.code === 'auth/email-already-in-use') {
@@ -208,7 +216,7 @@
                     } else if (err.code === 'auth/invalid-email') {
                         setError('รูปแบบอีเมลไม่ถูกต้องครับ');
                     } else if (err.code === 'auth/operation-not-allowed') {
-                        setError('ระบบลงชื่อเข้าใช้ด้วยอีเมลยังไม่เปิดใช้งานใน Firebase Console ของคุณพ่อ');
+                        setError('ระบบลงชื่อเข้าใช้ด้วยอีเมลยังไม่เปิดใช้งานใน Firebase Console ของคุณพ่อ (กรุณาทำตามคู่มือบนหน้าจอ)');
                     } else {
                         setError(err.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบฐานข้อมูล');
                     }
@@ -218,14 +226,14 @@
             };
 
             return (
-                <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50 w-full">
+                <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50">
                     <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 max-w-md w-full slide-up">
                         <div className="text-center mb-8">
                             <div className="inline-block bg-indigo-600 text-white p-3.5 rounded-2xl mb-4 shadow-md">
                                 <Icons.Target />
                             </div>
                             <h2 className="text-2xl font-bold text-gray-800">Dek71 Mission Control</h2>
-                            <p className="text-sm text-gray-500 mt-1">ระบบวิเคราะห์ข้อมูลแชร์กลางพร้อมระบบบันทึก Log กิจกรรม</p>
+                            <p className="text-sm text-gray-500 mt-1">ระบบวิเคราะห์ข้อมูลและวางแผนเพื่อสติปัญญาศิษย์รุ่น 71</p>
                         </div>
 
                         {/* Tab Switcher */}
@@ -302,23 +310,24 @@
             );
         };
 
+        // --- WAITING APPROVAL SCREEN ---
         const WaitingApprovalScreen = ({ email, onSignOut }) => {
             return (
-                <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50 w-full">
+                <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50">
                     <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 max-w-md w-full text-center slide-up">
                         <div className="inline-block bg-amber-50 text-amber-500 p-4 rounded-full mb-4">
                             <Icons.Alert />
                         </div>
                         <h2 className="text-xl font-bold text-gray-800">รอการอนุมัติสิทธิ์การใช้งาน</h2>
                         <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-                            บัญชีผู้ใช้ <strong className="text-indigo-600 font-semibold">{email}</strong> สมัครลงทะเบียนเรียบร้อยแล้วครับ! ขณะนี้รอคุณพ่อ (Admin: family71@gmail.com) กดยอมรับการผ่านสิทธิ์ในระบบ จึงจะเห็นข้อมูลหน้าจอหลักได้ครับ
+                            บัญชีผู้ใช้ <strong className="text-indigo-600 font-semibold">{email}</strong> สมัครลงทะเบียนเรียบร้อยแล้วครับ! ขณะนี้รอการตรวจสอบและกดยืนยันสิทธิ์จากคุณพ่อ (Admin) ผ่านหน้าหลัก จึงจะสามารถเข้าถึงระบบได้
                         </p>
                         <div className="mt-8 pt-6 border-t border-gray-100 flex gap-3">
                             <button
                                 onClick={() => window.location.reload()}
                                 className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-xs transition-colors"
                             >
-                                🔄 โหลดหน้าใหม่
+                                🔄 โหลดหน้าเว็บใหม่
                             </button>
                             <button
                                 onClick={onSignOut}
@@ -332,6 +341,7 @@
             );
         };
 
+        // --- SUBJECT DETAIL MODAL ---
         const SubjectModal = ({ subject, onClose, onUpdateTopic, onAddCustomTopic, onDeleteCustomTopic, onAddScore, onDeleteScore, onUpdateTarget }) => {
             if (!subject) return null;
             const [newScore, setNewScore] = React.useState('');
@@ -483,7 +493,8 @@
             );
         };
 
-        const AdminPanelModal = ({ onClose, onShowToast }) => {
+        // --- ADMIN USER APPROVAL MODAL ---
+        const AdminPanelModal = ({ onClose }) => {
             const [usersList, setUsersList] = React.useState([]);
             const [loading, setLoading] = React.useState(true);
             const [queryError, setQueryError] = React.useState('');
@@ -491,6 +502,7 @@
             React.useEffect(() => {
                 if (!db) return;
                 
+                // ดึงข้อมูลแบบ Real-time พร้อมรับฟัง Error หากติดกฎความปลอดภัย
                 const unsubscribe = db.collection('user_approvals')
                     .onSnapshot((snapshot) => {
                         setQueryError('');
@@ -499,6 +511,7 @@
                             users.push({ id: doc.id, ...doc.data() });
                         });
                         
+                        // เรียงลำดับข้อมูลด้วยระบบ JavaScript
                         users.sort((a, b) => {
                             const dateA = a.registeredAt ? (a.registeredAt.seconds || new Date(a.registeredAt).getTime()) : 0;
                             const dateB = b.registeredAt ? (b.registeredAt.seconds || new Date(b.registeredAt).getTime()) : 0;
@@ -515,23 +528,23 @@
                 return () => unsubscribe();
             }, []);
 
-            const handleToggleApproval = async (userId, currentStatus, userEmail) => {
+            const handleToggleApproval = async (userId, currentStatus) => {
                 try {
                     await db.collection('user_approvals').doc(userId).update({
                         approved: !currentStatus
                     });
-                    onShowToast(`ปรับปรุงสถานะไอดี ${userEmail} สำเร็จ`);
                 } catch (err) {
-                    onShowToast("ไม่สามารถปรับปรุงสิทธิ์ได้: " + err.message, "error");
+                    alert("ไม่สามารถปรับปรุงสิทธิ์ได้: " + err.message);
                 }
             };
 
-            const handleDeleteUserDoc = async (userId, userEmail) => {
-                try {
-                    await db.collection('user_approvals').doc(userId).delete();
-                    onShowToast(`ลบข้อมูลคำร้องไอดี ${userEmail} เรียบร้อยแล้ว`);
-                } catch (err) {
-                    onShowToast("ลบไม่สำเร็จ: " + err.message, "error");
+            const handleDeleteUserDoc = async (userId) => {
+                if (window.confirm("คุณพ่อแน่ใจหรือไม่ว่าต้องการลบข้อมูลสิทธิ์ของไอดีนี้?")) {
+                    try {
+                        await db.collection('user_approvals').doc(userId).delete();
+                    } catch (err) {
+                        alert("ลบไม่สำเร็จ: " + err.message);
+                    }
                 }
             };
 
@@ -554,7 +567,7 @@
                                 <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded-r-xl">
                                     <p className="font-bold">⚠️ ตรวจพบข้อผิดพลาดด้านสิทธิ์ความปลอดภัยคลาวด์:</p>
                                     <p className="mt-1 font-mono">{queryError}</p>
-                                    <p className="mt-2 text-gray-500">แนะนำให้คุณพ่อปรับปรุงกฎ (Firestore Rules) ในหน้าเว็บจัดการ Firebase ตามคู่มือล่าสุดเพื่อให้ระบบสามารถดึงข้อมูลได้ครับ</p>
+                                    <p className="mt-2 text-gray-500">แนะนำให้คุณพ่อปรับปรุงกฎ (Firestore Rules) ในหน้าเว็บจัดการ Firebase ตามคู่มือด้านล่างเพื่อให้ระบบยอมรับการดึงข้อมูลครับ</p>
                                 </div>
                             )}
 
@@ -581,7 +594,7 @@
 
                                             <div className="flex items-center gap-2 shrink-0">
                                                 <button
-                                                    onClick={() => handleToggleApproval(user.id, user.approved, user.email)}
+                                                    onClick={() => handleToggleApproval(user.id, user.approved)}
                                                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-colors ${
                                                         user.approved 
                                                             ? 'bg-amber-600 hover:bg-amber-700 text-white' 
@@ -592,7 +605,7 @@
                                                 </button>
                                                 {user.email !== ADMIN_EMAIL && (
                                                     <button
-                                                        onClick={() => handleDeleteUserDoc(user.id, user.email)}
+                                                        onClick={() => handleDeleteUserDoc(user.id)}
                                                         className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
                                                         title="ลบรายชื่อ"
                                                     >
@@ -606,16 +619,16 @@
                             )}
                         </div>
                         <div className="p-4 border-t border-gray-100 bg-gray-50 text-right text-xs text-gray-400">
-                            * เฉพาะบัญชีที่ได้รับการ 'อนุมัติแล้ว' เท่านั้นจึงจะสามารถอ่านและเขียนข้อมูลในแดชบอร์ดแชร์ร่วมกันได้
+                            * เฉพาะผู้ใช้ที่ได้รับการ 'อนุมัติแล้ว' เท่านั้นจึงจะสามารถเขียน/อ่าน แผนการเรียนคลาวด์ได้
                         </div>
                     </div>
                 </div>
             );
         };
 
+        // --- MAIN DASHBOARD APP ---
         const Dek71Dashboard = () => {
             const [subjects, setSubjects] = React.useState([]);
-            const [logs, setLogs] = React.useState([]);
             const [totalReadiness, setTotalReadiness] = React.useState(0);
             const [averageScore, setAverageScore] = React.useState(0);
             const [selectedSubject, setSelectedSubject] = React.useState(null);
@@ -633,19 +646,7 @@
 
             const [tpatCountdown, setTpatCountdown] = React.useState({ days: 0 });
             const [alevelCountdown, setAlevelCountdown] = React.useState({ days: 0 });
-            
-            // Custom Modals and Toast notification states (No Alerts!)
             const [showResetConfirm, setShowResetConfirm] = React.useState(false);
-            const [toastMessage, setToastMessage] = React.useState('');
-            const [toastType, setToastType] = React.useState('success'); // success or error
-
-            const triggerToast = (msg, type = 'success') => {
-                setToastMessage(msg);
-                setToastType(type);
-                setTimeout(() => {
-                    setToastMessage('');
-                }, 3500);
-            };
 
             const createInitialData = () => {
                 return [
@@ -667,9 +668,9 @@
             };
 
             const getStatusLabel = (statusStr) => {
-                if (statusStr === 'online') return 'คลาวด์ครอบครัวซิงค์สมบูรณ์ (Shared Online)';
-                if (statusStr.includes('offline')) return 'โหมดใช้งานภายในเครื่อง (Offline Local)';
-                return 'กำลังตรวจสอบสถานะการซิงค์...';
+                if (statusStr === 'online') return 'คลาวด์ซิงค์ปลอดภัย (Online)';
+                if (statusStr.includes('offline')) return 'โหมดประมวลผลภายในเครื่อง (Offline Local)';
+                return 'กำลังตรวจสอบสถานะ...';
             };
 
             // 1. ตรวจจับสถานะ Auth
@@ -697,10 +698,12 @@
 
                 const userEmail = currentUser.email ? currentUser.email.toLowerCase() : '';
 
+                // กรณีล็อกอินด้วยบัญชีแอดมิน (คุณพ่อ) - ปลดล็อกอัตโนมัติ
                 if (userEmail === ADMIN_EMAIL) {
                     setIsApproved(true);
                     setAuthLoading(false);
                     
+                    // บันทึก/อัปเดตสถานะแอดมินลงในตารางสิทธิ์
                     db.collection('user_approvals').doc(currentUser.uid).set({
                         email: userEmail,
                         approved: true,
@@ -709,6 +712,7 @@
                     return;
                 }
 
+                // กรณีผู้ใช้ทั่วไป - เช็คเอกสารอนุมัติสิทธิ์ (Real-time monitoring)
                 const approvalDocRef = db.collection('user_approvals').doc(currentUser.uid);
                 
                 const unsubscribe = approvalDocRef.onSnapshot((doc) => {
@@ -716,6 +720,7 @@
                         const data = doc.data();
                         setIsApproved(data.approved === true);
                     } else {
+                        // ไม่บันทึกซ้ำซ้อนในหน้านี้ ป้องกัน Race Condition ให้รอฟังอย่างเดียว
                         setIsApproved(false);
                     }
                     setAuthLoading(false);
@@ -728,14 +733,14 @@
                 return () => unsubscribe();
             }, [currentUser, authLoading]);
 
-            // 3. กู้คืนและเซฟข้อมูลแบบแชร์ส่วนกลางรวมกัน (Shared Data + Logs)
+            // 3. กู้คืนและเซฟข้อมูลแบบแยกผู้ใช้ตาม ID
             React.useEffect(() => {
                 if (authLoading || !currentUser || !isApproved) return;
 
                 setStatus('online');
                 
-                // ชี้ไปที่โฟลเดอร์แชร์ของครอบครัวร่วมกันข้ามเครื่อง (Shared Path)
-                const docRef = db.collection('shared_data').doc('dek71_v2');
+                // ชี้ไปที่คลาวด์ของผู้ใช้แต่ละคนอย่างปลอดภัย
+                const docRef = db.collection('users').doc(currentUser.uid).collection('data').doc('dek71_v2');
                 
                 const unsubscribeSnapshot = docRef.onSnapshot((doc) => {
                     if (doc.exists) {
@@ -749,36 +754,13 @@
                         setSubjects(initialData);
                     }
                 }, (err) => {
-                    console.error("Shared data syncing error:", err);
+                    console.error("Data syncing error:", err);
                     setStatus('offline (error)');
-                    const savedData = localStorage.getItem('dek71_shared_local');
+                    const savedData = localStorage.getItem(`dek71_v2_${currentUser.uid}`);
                     if (savedData) setSubjects(JSON.parse(savedData).subjects);
                 });
 
-                // ดึงรายการ Log การเปลี่ยนแปลงระบบล่าสุดแบบ Real-time และเรียงตามลำดับเวลาฝั่ง Client ป้องกัน Index Crash
-                const unsubscribeLogs = db.collection('shared_logs')
-                    .onSnapshot((snapshot) => {
-                        const logsData = [];
-                        snapshot.forEach((doc) => {
-                            logsData.push({ id: doc.id, ...doc.data() });
-                        });
-                        
-                        // คัดแยกเรียงลำดับเวลาความแม่นยำสูง
-                        logsData.sort((a, b) => {
-                            const dateA = a.timestamp ? (a.timestamp.seconds || new Date(a.timestamp).getTime()) : 0;
-                            const dateB = b.timestamp ? (b.timestamp.seconds || new Date(b.timestamp).getTime()) : 0;
-                            return dateB - dateA;
-                        });
-
-                        setLogs(logsData.slice(0, 20));
-                    }, (err) => {
-                        console.error("Logs fetching error:", err);
-                    });
-
-                return () => {
-                    unsubscribeSnapshot();
-                    unsubscribeLogs();
-                };
+                return () => unsubscribeSnapshot();
             }, [currentUser, isApproved, authLoading]);
 
             // ตัวคำนวณเวลานับถอยหลังแยก
@@ -794,34 +776,23 @@
                 return () => clearInterval(timer);
             }, [tpatDateStr, alevelDateStr]);
 
-            // บันทึกข้อมูลและสร้าง Log บันทึกกิจกรรมข้ามเครื่อง
-            const saveStateAndLog = (updatedSubs, actionDesc, tpatD = tpatDateStr, alevelD = alevelDateStr) => {
+            const saveState = (updatedSubs, tpatD = tpatDateStr, alevelD = alevelDateStr) => {
                 if (!currentUser) return;
                 
-                // สำรองข้อมูลในเครื่องกันเหนียว
-                localStorage.setItem('dek71_shared_local', JSON.stringify({ subjects: updatedSubs, tpatDate: tpatD, alevelDate: alevelD }));
+                // สำรองข้อมูลลงเบราว์เซอร์เครื่องนั้น ๆ
+                localStorage.setItem(`dek71_v2_${currentUser.uid}`, JSON.stringify({ subjects: updatedSubs, tpatDate: tpatD, alevelDate: alevelD }));
                 
-                // เขียนเข้าเอกสารแชร์ส่วนกลาง
+                // เขียนข้อมูลขึ้นสู่ Firestore
                 if (db && isApproved) {
-                    db.collection('shared_data').doc('dek71_v2').set({ 
+                    db.collection('users').doc(currentUser.uid).collection('data').doc('dek71_v2').set({ 
                         subjects: updatedSubs, 
                         tpatDate: tpatD, 
                         alevelDate: alevelD 
-                    }).then(() => {
-                        // บันทึก Log เข้าสู่ระบบ Firestore
-                        db.collection('shared_logs').add({
-                            email: currentUser.email,
-                            action: actionDesc,
-                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    }).catch(e => {
-                        console.error("Cloud sharing aborted:", e);
-                        triggerToast("เกิดข้อผิดพลาดในการอัปเดตระบบคลาวด์", "error");
-                    });
+                    }).catch(e => console.error("Cloud saving aborted:", e));
                 }
             };
 
-            // คำนวณความคืบหน้ารวมภาพสะสมถ่วงน้ำหนัก
+            // คำนวณความคืบหน้ารวม
             React.useEffect(() => {
                 if (subjects.length > 0) {
                     const weightedScore = subjects.reduce((acc, sub) => acc + (sub.progress * sub.weight / 100), 0);
@@ -837,7 +808,7 @@
                 }
             }, [subjects]);
 
-            const updateSubjectState = (subjectId, actionDesc, updaterFn) => {
+            const updateSubjectState = (subjectId, updaterFn) => {
                 const newSubjects = subjects.map(sub => {
                     if (sub.id !== subjectId) return sub;
                     const updated = updaterFn(sub);
@@ -846,16 +817,11 @@
                     return updated;
                 });
                 setSubjects(newSubjects);
-                saveStateAndLog(newSubjects, actionDesc);
+                saveState(newSubjects);
             };
 
             const handleUpdateTopic = (subjectId, topicIndex) => {
-                const subject = subjects.find(s => s.id === subjectId);
-                const topicName = subject.topics[topicIndex].name;
-                const nextStatus = !subject.topics[topicIndex].completed;
-                const statusText = nextStatus ? "เช็คผ่านบทเรียน" : "ยกเลิกเช็คบทเรียน";
-
-                updateSubjectState(subjectId, `${statusText}: '${topicName}' ในวิชา ${subject.name}`, (sub) => {
+                updateSubjectState(subjectId, (sub) => {
                     const currentTopics = sub.topics || [];
                     const newTopics = currentTopics.map((t, i) => i === topicIndex ? { ...t, completed: !t.completed } : t);
                     const progress = newTopics.length > 0 ? Math.round((newTopics.filter(t => t.completed).length / newTopics.length) * 100) : 0;
@@ -864,75 +830,55 @@
             };
 
             const handleAddCustomTopic = (subjectId, topicName) => {
-                const subject = subjects.find(s => s.id === subjectId);
-                updateSubjectState(subjectId, `เพิ่มหัวข้อบทเรียนใหม่: '${topicName}' ในวิชา ${subject.name}`, (sub) => {
+                updateSubjectState(subjectId, (sub) => {
                     const currentTopics = sub.topics || [];
                     const newTopics = [...currentTopics, { name: topicName, completed: false }];
                     const progress = newTopics.length > 0 ? Math.round((newTopics.filter(t => t.completed).length / newTopics.length) * 100) : 0;
                     return { ...sub, topics: newTopics, progress };
                 });
-                triggerToast(`เพิ่มหัวข้อในวิชา ${subject.name} เรียบร้อย`);
             };
 
             const handleDeleteCustomTopic = (subjectId, topicIndex) => {
-                const subject = subjects.find(s => s.id === subjectId);
-                const topicName = subject.topics[topicIndex].name;
-                updateSubjectState(subjectId, `ลบหัวข้อบทเรียน: '${topicName}' ออกจากวิชา ${subject.name}`, (sub) => {
+                updateSubjectState(subjectId, (sub) => {
                     const currentTopics = sub.topics || [];
                     const newTopics = currentTopics.filter((_, i) => i !== topicIndex);
                     const progress = newTopics.length > 0 ? Math.round((newTopics.filter(t => t.completed).length / newTopics.length) * 100) : 0;
                     return { ...sub, topics: newTopics, progress };
                 });
-                triggerToast("ลบหัวข้อบทเรียนแล้ว");
             };
 
             const handleAddScore = (subjectId, score, date) => {
-                const subject = subjects.find(s => s.id === subjectId);
-                updateSubjectState(subjectId, `บันทึกคะแนนสอบจำลองวิชา ${subject.name}: ทำได้ ${score} คะแนน (วันที่ ${date})`, (sub) => {
+                updateSubjectState(subjectId, (sub) => {
                     const safeHistory = sub.scoreHistory || [];
                     return { ...sub, scoreHistory: [...safeHistory, { score, date }] };
                 });
-                triggerToast("บันทึกสถิติคะแนนสอบย่อยสำเร็จ");
             };
 
             const handleDeleteScore = (subjectId, index) => {
-                const subject = subjects.find(s => s.id === subjectId);
-                const scoreValue = subject.scoreHistory[index].score;
-                updateSubjectState(subjectId, `ลบสถิติคะแนนสอบจำลอง ${scoreValue} คะแนน ของวิชา ${subject.name}`, (sub) => {
+                updateSubjectState(subjectId, (sub) => {
                     const safeHistory = [...(sub.scoreHistory || [])];
                     safeHistory.splice(index, 1);
                     return { ...sub, scoreHistory: safeHistory };
                 });
-                triggerToast("ลบสถิติคะแนนเรียบร้อย");
             };
 
             const handleUpdateTarget = (subjectId, val) => {
-                const subject = subjects.find(s => s.id === subjectId);
-                const scoreVal = val === '' ? 0 : parseInt(val);
-                updateSubjectState(subjectId, `ปรับปรุงคะแนนเป้าหมายวิชา ${subject.name}: เป็น ${scoreVal} คะแนน`, (sub) => ({ ...sub, targetScore: scoreVal }));
+                updateSubjectState(subjectId, (sub) => ({ ...sub, targetScore: val === '' ? 0 : parseInt(val) }));
             };
 
             const handleConfirmReset = () => {
                 const freshData = createInitialData();
                 setSubjects(freshData);
-                
                 if (db && isApproved) {
-                    db.collection('shared_data').doc('dek71_v2').set({ 
+                    db.collection('users').doc(currentUser.uid).collection('data').doc('dek71_v2').set({ 
                         subjects: freshData, 
                         tpatDate: '2027-12-18', 
                         alevelDate: '2028-03-18' 
-                    }).then(() => {
-                        db.collection('shared_logs').add({
-                            email: currentUser.email,
-                            action: "⚠️ ทำการรีเซ็ตล้างฐานข้อมูลสถิติและการเตรียมตัวทั้งหมดกลับเป็นค่าเริ่มต้น",
-                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                        });
                     });
                 }
                 setTpatDateStr('2027-12-18');
                 setAlevelDateStr('2028-03-18');
                 setShowResetConfirm(false);
-                triggerToast("รีเซ็ตระบบกลับเป็นค่าเริ่มต้นเรียบร้อยแล้ว", "error");
             };
 
             const handleSignOut = () => {
@@ -943,10 +889,10 @@
 
             if (authLoading) {
                 return (
-                    <div className="flex items-center justify-center min-h-screen bg-slate-50 w-full">
+                    <div className="flex items-center justify-center min-h-screen bg-slate-50">
                         <div className="text-center animate-pulse">
                             <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                            <p className="text-sm text-gray-500 font-semibold">กำลังเชื่อมต่อฐานข้อมูลส่วนกลาง...</p>
+                            <p className="text-sm text-gray-500 font-semibold">กำลังยืนยันความปลอดภัยบนระบบคลาวด์...</p>
                         </div>
                     </div>
                 );
@@ -956,6 +902,7 @@
                 return <LoginScreen />;
             }
 
+            // แสดงหน้าจอรอรับการตรวจสอบสิทธิ์
             if (!isApproved) {
                 return <WaitingApprovalScreen email={currentUser.email} onSignOut={handleSignOut} />;
             }
@@ -964,23 +911,13 @@
             const isAdmin = userEmail === ADMIN_EMAIL;
 
             return (
-                <div className="max-w-6xl mx-auto p-4 md:p-8 min-h-screen w-full relative">
-                    
-                    {/* Floating Toast Notification Box */}
-                    {toastMessage && (
-                        <div className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl shadow-lg text-white font-semibold flex items-center gap-2 slide-up ${
-                            toastType === 'success' ? 'bg-emerald-600' : 'bg-red-600'
-                        }`}>
-                            <span>🔔</span> {toastMessage}
-                        </div>
-                    )}
-
+                <div className="max-w-6xl mx-auto p-4 md:p-8 min-h-screen">
                     <header className="mb-8">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
                             <div>
                                 <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
                                     <span className="bg-indigo-600 text-white p-2 rounded-lg"><Icons.Target /></span>
-                                    MED 71 For Koranop only
+                                    Dek71 Tracker
                                 </h1>
                                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 ml-1">
                                     <div className="flex items-center gap-1.5">
@@ -1007,7 +944,7 @@
                                         onClick={() => setShowAdminPanel(true)}
                                         className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all shrink-0"
                                     >
-                                        <Icons.Shield /> 🛡️ จัดการอนุมัติสมาชิก
+                                        <Icons.Shield /> 🛡️ จัดการสิทธิ์ผู้ใช้งาน
                                     </button>
                                 )}
 
@@ -1020,7 +957,7 @@
                                             <input 
                                                 type="date" 
                                                 value={tpatDateStr} 
-                                                onChange={(e) => { setTpatDateStr(e.target.value); saveStateAndLog(subjects, `แก้ไขกำหนดวันสอบ TPAT1 เป็น ${e.target.value}`, e.target.value, alevelDateStr); }} 
+                                                onChange={(e) => { setTpatDateStr(e.target.value); saveState(subjects, e.target.value, alevelDateStr); }} 
                                                 onBlur={()=>setIsEditingTpat(false)} 
                                                 className="text-[10px] border p-0.5 rounded" 
                                                 autoFocus 
@@ -1040,7 +977,7 @@
                                             <input 
                                                 type="date" 
                                                 value={alevelDateStr} 
-                                                onChange={(e) => { setAlevelDateStr(e.target.value); saveStateAndLog(subjects, `แก้ไขกำหนดวันสอบ A-Level เป็น ${e.target.value}`, tpatDateStr, e.target.value); }} 
+                                                onChange={(e) => { setAlevelDateStr(e.target.value); saveState(subjects, tpatDateStr, e.target.value); }} 
                                                 onBlur={()=>setIsEditingAlevel(false)} 
                                                 className="text-[10px] border p-0.5 rounded" 
                                                 autoFocus 
@@ -1057,7 +994,7 @@
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
                                 <div className="relative z-10">
-                                    <div className="text-sm font-medium opacity-90 mb-1">ความพร้อมภาพรวมร่วมกันถ่วงน้ำหนัก (Family Shared Readiness)</div>
+                                    <div className="text-sm font-medium opacity-90 mb-1">ความพร้อมภาพรวมถ่วงน้ำหนัก (Weighted Readiness)</div>
                                     <div className="text-4xl font-bold">{totalReadiness.toFixed(2)}%</div>
                                     <div className="w-full bg-black/20 rounded-full h-1.5 mt-3 overflow-hidden">
                                         <div className="bg-white h-full" style={{ width: `${totalReadiness}%` }}></div>
@@ -1081,7 +1018,7 @@
                     </header>
 
                     {/* รายวิชาสอบทั้งหมด */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {subjects.map((sub) => {
                             const latest = sub.scoreHistory && sub.scoreHistory.length > 0 ? sub.scoreHistory[sub.scoreHistory.length-1].score : 0;
                             return (
@@ -1107,30 +1044,6 @@
                         })}
                     </div>
 
-                    {/* แดชบอร์ดประวัติบันทึกกิจกรรมเรียลไทม์ (Activity Logs Feed) */}
-                    <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mb-8">
-                        <div className="flex items-center gap-2 mb-4 border-b border-gray-100 pb-3">
-                            <span className="text-indigo-600"><Icons.History /></span>
-                            <h2 className="text-lg font-bold text-gray-800">ประวัติบันทึกกิจกรรมครอบครัวล่าสุด (Activity Log Feed)</h2>
-                        </div>
-                        <div className="max-h-[300px] overflow-y-auto scrollbar-hide space-y-3">
-                            {logs.map((log) => (
-                                <div key={log.id} className="flex items-start justify-between p-3 rounded-lg bg-slate-50 border border-gray-100 text-xs text-gray-600">
-                                    <div className="mr-4">
-                                        <span className="font-bold text-indigo-600">{log.email}</span>
-                                        <p className="mt-1 text-gray-800 font-medium">{log.action}</p>
-                                    </div>
-                                    <span className="text-[10px] text-gray-400 shrink-0">
-                                        {log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString('th-TH') : "กำลังซิงค์..."}
-                                    </span>
-                                </div>
-                            ))}
-                            {logs.length === 0 && (
-                                <div className="text-center py-6 text-gray-400">ยังไม่มีบันทึกประวัติกิจกรรมเริ่มต้นการแชร์ข้อมูล</div>
-                            )}
-                        </div>
-                    </div>
-
                     {/* รายวิชา Modal */}
                     {selectedSubject && (
                         <SubjectModal 
@@ -1147,7 +1060,7 @@
 
                     {/* Admin Panel Modal */}
                     {showAdminPanel && isAdmin && (
-                        <AdminPanelModal onClose={() => setShowAdminPanel(false)} onShowToast={triggerToast} />
+                        <AdminPanelModal onClose={() => setShowAdminPanel(false)} />
                     )}
 
                     {/* โมดอลยืนยันรีเซ็ต */}
@@ -1161,7 +1074,7 @@
                                     </div>
                                 </div>
                                 <h3 className="text-lg font-bold text-gray-800 mb-2">ยืนยันการเริ่มระบบใหม่?</h3>
-                                <p className="text-sm text-gray-500 mb-6">ความคืบหน้าสะสม สถิติคะแนนทั้งหมด และเป้าหมายของวิชาเรียนทั้งหมดจะถูกล้างค่าจากส่วนกลางร่วมกันเป็นศูนย์</p>
+                                <p className="text-sm text-gray-500 mb-6">ความคืบหน้าสะสม สถิติคะแนนทั้งหมด และตารางเป้าหมายของน้องจะถูกเคลียร์ล้างทั้งหมดเป็นศูนย์และไม่สามารถย้อนคืนกลับมาได้</p>
                                 <div className="flex gap-3">
                                     <button 
                                         onClick={() => setShowResetConfirm(false)} 
