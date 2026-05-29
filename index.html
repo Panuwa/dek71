@@ -55,9 +55,6 @@
 
     <!-- React Application Logic -->
     <script type="text/babel">
-        // ==========================================
-        // --- 1. FIREBASE CONFIGURATION & INITIALIZATION ---
-        // ==========================================
         const firebaseConfig = {
           apiKey: "AIzaSyDXQ9TIM1NbyR-PJNbVO74Cf_1w3hDWuGM",
           authDomain: "dek71-8af86.firebaseapp.com",
@@ -110,10 +107,12 @@
             Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
             Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
             Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-            Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
+            Logout: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+            User: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+            Lock: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         };
 
-        // --- PROGRESS CHART COMPONENT ---
         const ScoreChart = ({ history, targetScore }) => {
             if (!history || history.length < 2) return (
                 <div className="flex flex-col items-center justify-center h-32 bg-gray-50 rounded-lg border border-dashed border-gray-200 text-gray-400 text-xs">
@@ -167,7 +166,141 @@
             );
         };
 
-        // --- SUBJECT MODAL COMPONENT (WITH DYNAMIC TOPICS & SCORES) ---
+        const LoginScreen = ({ onLoginSuccess, isConnecting }) => {
+            const [isRegister, setIsRegister] = React.useState(false);
+            const [email, setEmail] = React.useState('');
+            const [password, setPassword] = React.useState('');
+            const [error, setError] = React.useState('');
+            const [loading, setLoading] = React.useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setError('');
+                if (!email || !password) {
+                    setError('กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วนครับ');
+                    return;
+                }
+                if (password.length < 6) {
+                    setError('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษรครับ');
+                    return;
+                }
+
+                setLoading(true);
+                try {
+                    if (isRegister) {
+                        await auth.createUserWithEmailAndPassword(email, password);
+                    } else {
+                        await auth.signInWithEmailAndPassword(email, password);
+                    }
+                } catch (err) {
+                    console.error("Auth error:", err);
+                    if (err.code === 'auth/user-not-found') {
+                        setError('ไม่พบผู้ใช้งานนี้ในระบบ กรุณาตรวจสอบอีเมลหรือเลือกแท็บสมัครใช้งานครับ');
+                    } else if (err.code === 'auth/wrong-password') {
+                        setError('รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้งครับ');
+                    } else if (err.code === 'auth/email-already-in-use') {
+                        setError('อีเมลนี้ถูกใช้งานแล้วในระบบครับ');
+                    } else if (err.code === 'auth/invalid-email') {
+                        setError('รูปแบบอีเมลไม่ถูกต้องครับ');
+                    } else {
+                        setError(err.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบฐานข้อมูล');
+                    }
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 max-w-md w-full slide-up">
+                        <div className="text-center mb-8">
+                            <div className="inline-block bg-indigo-600 text-white p-3.5 rounded-2xl mb-4 shadow-md">
+                                <Icons.Target />
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-800">Dek71 Mission Control</h2>
+                            <p className="text-sm text-gray-500 mt-1">ระบบวางแผนและวิเคราะห์สถิติเตรียมตัวสอบเพื่อสติปัญญาศิษย์รุ่น 71</p>
+                        </div>
+
+                        {/* Tab Switcher */}
+                        <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
+                            <button 
+                                onClick={() => { setIsRegister(false); setError(''); }}
+                                className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${!isRegister ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                            >
+                                เข้าสู่ระบบ
+                            </button>
+                            <button 
+                                onClick={() => { setIsRegister(true); setError(''); }}
+                                className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${isRegister ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                            >
+                                สมัครใช้งานใหม่
+                            </button>
+                        </div>
+
+                        {error && (
+                            <div className="mb-4 p-3.5 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded-r-lg">
+                                {error}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wide">อีเมลผู้ใช้งาน</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
+                                        <Icons.User />
+                                    </div>
+                                    <input 
+                                        type="email" 
+                                        required
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-gray-700"
+                                        placeholder="เช่น family71@gmail.com"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wide">รหัสผ่านสำหรับครอบครัว (อย่างน้อย 6 ตัวอักษร)</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
+                                        <Icons.Lock />
+                                    </div>
+                                    <input 
+                                        type="password" 
+                                        required
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-gray-700"
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition-colors shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {loading ? (
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                    isRegister ? 'สมัครสมาชิกและซิงค์คลาวด์' : 'ลงชื่อเข้าใช้งานทันที'
+                                )}
+                            </button>
+                        </form>
+
+                        <div className="mt-6 pt-5 border-t border-gray-100 text-center">
+                            <span className="text-[11px] text-gray-400 font-medium">
+                                * ลงทะเบียนครั้งเดียว เพื่อนำบัญชีนี้ไปใช้ล็อกอินเปิดดูและอัปเดตข้อมูลบนคอมพิวเตอร์และมือถือเครื่องอื่นๆ ได้พร้อมกัน
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const SubjectModal = ({ subject, onClose, onUpdateTopic, onAddCustomTopic, onDeleteCustomTopic, onAddScore, onDeleteScore, onUpdateTarget }) => {
             if (!subject) return null;
             const [newScore, setNewScore] = React.useState('');
@@ -325,7 +458,6 @@
             );
         };
 
-        // --- DASHBOARD APP COMPONENT ---
         const Dek71Dashboard = () => {
             const [subjects, setSubjects] = React.useState([]);
             const [totalReadiness, setTotalReadiness] = React.useState(0);
@@ -333,6 +465,7 @@
             const [selectedSubject, setSelectedSubject] = React.useState(null);
             const [status, setStatus] = React.useState('connecting'); 
             const [currentUser, setCurrentUser] = React.useState(null);
+            const [authLoading, setAuthLoading] = React.useState(true);
             
             // แยกสถานะเป้าหมายวันสอบ TPAT1 และ A-Level แยกกัน
             const [tpatDateStr, setTpatDateStr] = React.useState('2027-12-18'); 
@@ -373,51 +506,36 @@
                 return statusStr;
             };
 
-            // 1. One-time Init & Auth Listener (RULE 3 - มีระบบ Fallback ปลอดภัยหากไม่ได้เชื่อมคลาวด์)
             React.useEffect(() => {
-                const initAuth = async () => {
-                    if (!auth) {
-                        setStatus('offline');
-                        return;
-                    }
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await auth.signInWithCustomToken(__initial_auth_token);
-                        } else {
-                            await auth.signInAnonymously();
-                        }
-                    } catch (err) {
-                        console.warn("Auth priority failed, falling back to local storage:", err);
-                        setStatus('offline (local-fallback)');
-                        
-                        // สร้างและกู้คืน Local Uid สำหรับใช้งานออฟไลน์
-                        let localUid = localStorage.getItem('dek71_local_uid');
-                        if (!localUid) {
-                            localUid = 'local-user-' + Math.random().toString(36).substring(2, 9);
-                            localStorage.setItem('dek71_local_uid', localUid);
-                        }
-                        setCurrentUser({ uid: localUid, isLocalFallback: true });
-                    }
-                };
-                
-                initAuth();
-                
-                if (auth) {
-                    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
-                        if (user) {
-                            setCurrentUser(user);
-                        }
-                    });
-                    return () => unsubscribeAuth();
-                } else {
+                if (!auth) {
                     setStatus('offline');
+                    setAuthLoading(false);
+                    return;
                 }
+
+                const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+                    if (user) {
+                        setCurrentUser(user);
+                    } else {
+                        setCurrentUser(null);
+                    }
+                    setAuthLoading(false);
+                });
+
+                return () => unsubscribeAuth();
             }, []);
 
-            // 2. Data Fetching Listener (RULE 1 - ย้ายมาเป็นพิกัดคลาวด์ส่วนกลางร่วมกันข้ามเครื่อง)
             React.useEffect(() => {
-                // หากรันแบบ Local Storage (ไม่มี Firebase หรือเข้าสู่ระบบไม่ผ่าน)
-                if (!auth || !db || (currentUser && currentUser.isLocalFallback)) {
+                if (authLoading) return;
+                
+                // หากไม่มีผู้ล็อกอิน ให้ล้างข้อมูลเดิมออก เพื่อรอแสดงหน้าล็อกอิน
+                if (!currentUser) {
+                    setSubjects([]);
+                    return;
+                }
+
+                // กรณีไม่มีฐานข้อมูล Firebase (พยายามรันแบบ Local)
+                if (!auth || !db) {
                     setStatus('offline (local)');
                     const savedData = localStorage.getItem('dek71_local_v2');
                     if (savedData) {
@@ -431,13 +549,10 @@
                     return;
                 }
 
-                if (!currentUser) return; // Guard until auth complete
-
                 setStatus('online');
                 
-                // ปรับแต่งตาม RULE 1: ใช้ Public Path แทนการใช้ userId ส่วนบุคคล
-                // เพื่อให้เปิดเครื่องอื่นที่ใช้ appId ตัวเดียวกันสามารถซิงค์และอัปเดตข้อมูลชุดเดียวกันได้แบบ Real-time
-                const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('user_control_v2');
+                // ชี้ไปที่ฐานข้อมูลของผู้ใช้งานจริง (User-specific private path เพื่อให้เครื่องที่ Login บัญชีเดียวกันเห็นตรงกัน)
+                const docRef = db.collection('users').doc(currentUser.uid).collection('data').doc('dek71_v2');
                 
                 const unsubscribeSnapshot = docRef.onSnapshot((doc) => {
                     if (doc.exists) {
@@ -446,19 +561,20 @@
                         if(data.tpatDate) setTpatDateStr(data.tpatDate);
                         if(data.alevelDate) setAlevelDateStr(data.alevelDate);
                     } else {
+                        // หากเป็นบัญชีใหม่และยังไม่มีข้อมูลในคลาวด์ ให้ใช้ค่าตั้งต้น
                         const initialData = createInitialData();
                         docRef.set({ subjects: initialData, tpatDate: '2027-12-18', alevelDate: '2028-03-18' });
                         setSubjects(initialData);
                     }
                 }, (err) => {
-                    console.error("Snapshot read permission error:", err);
+                    console.error("Firestore Real-time sync error:", err);
                     setStatus('offline (error)');
                     const savedData = localStorage.getItem('dek71_local_v2');
                     if (savedData) setSubjects(JSON.parse(savedData).subjects);
                 });
 
                 return () => unsubscribeSnapshot();
-            }, [currentUser]);
+            }, [currentUser, authLoading]);
 
             // ตัวคำนวณเวลานับถอยหลังแยก
             React.useEffect(() => {
@@ -477,9 +593,9 @@
                 // บันทึกใส่ LocalStorage เสมอกันเหนียว
                 localStorage.setItem('dek71_local_v2', JSON.stringify({ subjects: updatedSubs, tpatDate: tpatD, alevelDate: alevelD }));
                 
-                // บันทึกลงระบบ Firestore เส้นทางส่วนกลางสาธารณะ (Public Path) ตาม RULE 1
-                if (db && currentUser && !currentUser.isLocalFallback) {
-                    db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('user_control_v2').set({ 
+                // บันทึกลงระบบ Firestore ภายใต้ UID ของผู้ใช้
+                if (db && currentUser) {
+                    db.collection('users').doc(currentUser.uid).collection('data').doc('dek71_v2').set({ 
                         subjects: updatedSubs, 
                         tpatDate: tpatD, 
                         alevelDate: alevelD 
@@ -568,8 +684,8 @@
                 const freshData = createInitialData();
                 setSubjects(freshData);
                 localStorage.removeItem('dek71_local_v2');
-                if (db && currentUser && !currentUser.isLocalFallback) {
-                    db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('user_control_v2').set({ 
+                if (db && currentUser) {
+                    db.collection('users').doc(currentUser.uid).collection('data').doc('dek71_v2').set({ 
                         subjects: freshData, 
                         tpatDate: '2027-12-18', 
                         alevelDate: '2028-03-18' 
@@ -580,6 +696,29 @@
                 setShowResetConfirm(false);
             };
 
+            const handleSignOut = () => {
+                if (auth) {
+                    auth.signOut();
+                }
+            };
+
+            // กำลังโหลดหน้าสถานะยืนยันตัวตนหลัก
+            if (authLoading) {
+                return (
+                    <div className="flex items-center justify-center min-h-screen bg-slate-50">
+                        <div className="text-center animate-pulse">
+                            <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                            <p className="text-sm text-gray-500 font-semibold">กำลังยืนยันความปลอดภัยบนระบบคลาวด์...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            // ถ้ายังไม่ได้รับการเข้าสู่ระบบ ให้ไปที่หน้าจอล็อกอิน
+            if (!currentUser) {
+                return <LoginScreen isConnecting={status === 'connecting'} />;
+            }
+
             return (
                 <div className="max-w-6xl mx-auto p-4 md:p-8 min-h-screen">
                     <header className="mb-8">
@@ -589,9 +728,22 @@
                                     <span className="bg-indigo-600 text-white p-2 rounded-lg"><Icons.Target /></span>
                                     Dek71 Tracker (Mission Control v2.5)
                                 </h1>
-                                <div className="flex items-center gap-2 mt-2 ml-1">
-                                    <div className={`w-2.5 h-2.5 rounded-full ${status === 'online' ? 'bg-green-500' : (status.includes('syncing') ? 'bg-yellow-500 animate-pulse' : 'bg-orange-500')}`}></div>
-                                    <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">{getStatusLabel(status)}</p>
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 ml-1">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className={`w-2.5 h-2.5 rounded-full ${status === 'online' ? 'bg-green-500' : (status.includes('syncing') ? 'bg-yellow-500 animate-pulse' : 'bg-orange-500')}`}></div>
+                                        <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">{getStatusLabel(status)}</p>
+                                    </div>
+                                    <span className="text-gray-300">|</span>
+                                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                        <Icons.User />
+                                        <span className="font-semibold">{currentUser.email}</span>
+                                    </div>
+                                    <button 
+                                        onClick={handleSignOut}
+                                        className="text-xs text-red-500 hover:text-red-600 font-bold flex items-center gap-1 ml-2 border border-red-200/50 hover:border-red-500/30 px-2 py-0.5 rounded-md hover:bg-red-50 transition-all"
+                                    >
+                                        <Icons.Logout /> ออกจากระบบ
+                                    </button>
                                 </div>
                             </div>
 
