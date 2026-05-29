@@ -166,7 +166,7 @@
             );
         };
 
-        // --- LOGIN SCREEN ---
+        // --- LOGIN SCREEN (WITH SECURE REGISTRATION WRITE) ---
         const LoginScreen = ({ onLoginSuccess }) => {
             const [isRegister, setIsRegister] = React.useState(false);
             const [email, setEmail] = React.useState('');
@@ -189,7 +189,17 @@
                 setLoading(true);
                 try {
                     if (isRegister) {
-                        await auth.createUserWithEmailAndPassword(email.trim(), password);
+                        const userCredential = await auth.createUserWithEmailAndPassword(email.trim(), password);
+                        const user = userCredential.user;
+                        
+                        // ปูระบบเขียนเอกสารขอคำร้องทันทีตั้งแต่สมัคร ป้องกันฐานข้อมูลคัดกรองข้ามเครื่องหล่นหาย
+                        if (db) {
+                            await db.collection('user_approvals').doc(user.uid).set({
+                                email: user.email.trim(),
+                                approved: user.email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase(),
+                                registeredAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        }
                     } else {
                         await auth.signInWithEmailAndPassword(email.trim(), password);
                     }
@@ -488,13 +498,22 @@
 
             React.useEffect(() => {
                 if (!db) return;
+                
+                // ถอดคำสั่ง Query OrderBy เพื่อดึงทุกรายชื่อสมัครใหม่ขึ้นมา 100% ไร้ตกหล่น
                 const unsubscribe = db.collection('user_approvals')
-                    .orderBy('registeredAt', 'desc')
                     .onSnapshot((snapshot) => {
                         const users = [];
                         snapshot.forEach((doc) => {
                             users.push({ id: doc.id, ...doc.data() });
                         });
+                        
+                        // เรียงลำดับข้อมูลด้วยระบบ JavaScript บนเบราว์เซอร์ เพื่อความแม่นยำสูง
+                        users.sort((a, b) => {
+                            const dateA = a.registeredAt ? (a.registeredAt.seconds || new Date(a.registeredAt).getTime()) : 0;
+                            const dateB = b.registeredAt ? (b.registeredAt.seconds || new Date(b.registeredAt).getTime()) : 0;
+                            return dateB - dateA;
+                        });
+                        
                         setUsersList(users);
                         setLoading(false);
                     }, (err) => {
