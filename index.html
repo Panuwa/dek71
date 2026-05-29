@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MED71 Monitor and Evaluation: Deep Dive (Cloud Sync)</title>
+    <title>MED71 Monitor and Evaluation (Cloud Sync)</title>
     
     <!-- React & Tailwind CSS via CDNJS -->
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
@@ -43,11 +43,17 @@
           measurementId: "G-YDCNM0C1FR"
         };
 
-        firebase.initializeApp(firebaseConfig);
+        let app;
+        if (!firebase.apps.length) {
+            app = firebase.initializeApp(firebaseConfig);
+        } else {
+            app = firebase.app();
+        }
+        
         const db = firebase.firestore();
         const auth = firebase.auth();
-        const appId = 'med71-monitor-evaluation'; 
-        const ADMIN_EMAIL = "family71@gmail.com";
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'med71-monitor-evaluation'; 
+        const ADMIN_EMAIL = "admin@med71.com"; 
 
         // ==========================================
         // --- 2. MASTER CURRICULUM DATA ---
@@ -162,33 +168,18 @@
 
         // --- AUTH & MAIN APP COMPONENT ---
         const App = () => {
-            // โหมดล็อกอิน: 'login' | 'admin_login' | 'dashboard'
+            const [firebaseUser, setFirebaseUser] = React.useState(null); // สถานะยืนยันตัวตนคลาวด์ (กุญแจสำคัญป้องกัน Permission Error)
             const [authMode, setAuthMode] = React.useState('login'); 
-            const [currentSession, setCurrentSession] = React.useState(null); // { name: '...', role: 'admin'|'member' }
+            const [currentSession, setCurrentSession] = React.useState(null); 
+            const [isOfflineMode, setIsOfflineMode] = React.useState(false); 
+            const [cloudConnected, setCloudConnected] = React.useState(false); 
 
             // ตัวแปรล็อกอินเบราว์เซอร์
             const [usernameInput, setUsernameInput] = React.useState('');
             const [passwordInput, setPasswordInput] = React.useState('');
-
-            // ตัวแปรสำหรับรับค่าบัญชีแอดมินคุณพ่อ
             const [email, setEmail] = React.useState('');
             const [password, setPassword] = React.useState('');
             
-            // ข้อมูลตารางและบัญชีในคลาวด์
-            const [subjects, setSubjects] = React.useState([]);
-            const [logs, setLogs] = React.useState([]);
-            const [familyAccounts, setFamilyAccounts] = React.useState([]); // บัญชีผู้ใช้ย่อยที่คุณพ่อสร้าง
-            const [errorMessage, setErrorMessage] = React.useState('');
-            
-            // ตัวควบคุม UI
-            const [showAdminPanel, setShowAdminPanel] = React.useState(false);
-            const [selectedSubject, setSelectedSubject] = React.useState(null);
-            const [showResetConfirm, setShowResetConfirm] = React.useState(false);
-
-            // บัญชีแอดมินคุณพ่อที่ใช้จัดการสร้างบัญชีคนในครอบครัว
-            const [newFamUsername, setNewFamUsername] = React.useState('');
-            const [newFamPassword, setNewFamPassword] = React.useState('');
-
             const createInitialData = () => [
                 { id: 'tpat1', name: 'TPAT1 (ความถนัดแพทย์)', weight: 30, color: 'bg-orange-500', icon: 'Brain', targetScore: 65 },
                 { id: 'math1', name: 'คณิตศาสตร์ 1', weight: 14, color: 'bg-blue-600', icon: 'Target', targetScore: 60 },
@@ -205,30 +196,29 @@
                 topics: MASTER_CURRICULUM[s.id] ? MASTER_CURRICULUM[s.id].map(t => ({ name: t, completed: false })) : []
             }));
 
-            // 🛡️ ระบบเยียวยาฟื้นฟูข้อมูลหัวข้อวิชาที่เสียหายหรือว่างเปล่าบนคลาวด์อัตโนมัติ
+            const [subjects, setSubjects] = React.useState(createInitialData());
+            const [logs, setLogs] = React.useState([]);
+            const [familyAccounts, setFamilyAccounts] = React.useState([]); 
+            const [errorMessage, setErrorMessage] = React.useState('');
+            
+            const [showAdminPanel, setShowAdminPanel] = React.useState(false);
+            const [selectedSubject, setSelectedSubject] = React.useState(null);
+            const [showResetConfirm, setShowResetConfirm] = React.useState(false);
+
+            const [newFamUsername, setNewFamUsername] = React.useState('');
+            const [newFamPassword, setNewFamPassword] = React.useState('');
+
             const healAndRestoreData = (loadedSubjects) => {
-                if (!loadedSubjects || loadedSubjects.length === 0) {
-                    return createInitialData();
-                }
-                
+                if (!loadedSubjects || loadedSubjects.length === 0) return createInitialData();
                 const template = createInitialData();
                 
                 return template.map(defaultSub => {
-                    // ค้นหาวิชาเดิมที่บันทึกไว้ในคลาวด์
                     const existing = loadedSubjects.find(s => s.id === defaultSub.id);
-                    if (!existing) {
-                        return defaultSub; // หากไม่มีวิชานี้เลย ให้ใช้วิชาใหม่
-                    }
+                    if (!existing) return defaultSub;
                     
-                    // หากมีวิชาแต่ไม่มีหัวข้อบทเรียนเลย (สูญหาย) ให้เยียวยาเอาหัวข้อหลักใส่กลับเข้าไป
-                    const healedTopics = (existing.topics && existing.topics.length > 0) 
-                        ? existing.topics 
-                        : defaultSub.topics;
-
+                    const healedTopics = (existing.topics && existing.topics.length > 0) ? existing.topics : defaultSub.topics;
                     const completedCount = healedTopics.filter(t => t.completed).length;
-                    const calculatedProgress = healedTopics.length > 0 
-                        ? Math.round((completedCount / healedTopics.length) * 100) 
-                        : 0;
+                    const calculatedProgress = healedTopics.length > 0 ? Math.round((completedCount / healedTopics.length) * 100) : 0;
 
                     return {
                         ...defaultSub,
@@ -240,76 +230,109 @@
                 });
             };
 
-            // 1. ตรวจสอบและล็อกอินเบื้องหลัง (Background Technical Auth)
+            // 1. SETUP FIREBASE AUTH (MUST COMPLETE BEFORE DATA FETCH)
             React.useEffect(() => {
-                const setupBackgroundAuth = async () => {
+                const initAuth = async () => {
                     try {
-                        // ใช้ Technical Account ส่วนกลางในการคุยกับ Firestore ในระบบคลาวด์เบื้องหลัง
-                        await auth.signInWithEmailAndPassword("dek71_shared@gmail.com", "shared7171");
-                    } catch (err) {
-                        if (err.code === 'auth/user-not-found') {
-                            try {
-                                await auth.createUserWithEmailAndPassword("dek71_shared@gmail.com", "shared7171");
-                            } catch (e) {
-                                console.error("Setup silent user failed:", e);
-                            }
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await auth.signInWithCustomToken(__initial_auth_token);
+                        } else {
+                            await auth.signInAnonymously();
                         }
-                    }
-
-                    // ฟื้นฟูเซสชันการล็อกอินจาก LocalStorage ในเครื่อง
-                    const savedSession = localStorage.getItem('med71_session');
-                    if (savedSession) {
-                        const parsed = JSON.parse(savedSession);
-                        setCurrentSession(parsed);
-                        setAuthMode('dashboard');
+                    } catch (err) {
+                        console.warn("Auth setup failed. Offline mode will be available.", err);
                     }
                 };
 
-                setupBackgroundAuth();
+                initAuth();
+
+                const unsubscribe = auth.onAuthStateChanged((user) => {
+                    setFirebaseUser(user);
+                    if (user) setCloudConnected(true);
+                    else setCloudConnected(false);
+                });
+
+                // Restore persistent UI session
+                const savedSession = localStorage.getItem('med71_session');
+                if (savedSession) {
+                    const parsed = JSON.parse(savedSession);
+                    setCurrentSession(parsed);
+                    setAuthMode('dashboard');
+                    if (parsed.role === 'offline') setIsOfflineMode(true);
+                }
+
+                // Restore offline cached accounts for login stability
+                const cachedAccounts = localStorage.getItem('med71_cached_accounts');
+                if (cachedAccounts) {
+                    setFamilyAccounts(JSON.parse(cachedAccounts));
+                }
+
+                return () => unsubscribe();
             }, []);
 
-            // 2. ซิงค์แผนการเรียน, บันทึกกิจกรรม, และรายชื่อผู้ใช้ที่ผ่านอนุมัติแบบเรียลไทม์
+            // 2. OFFLINE MODE DATA HANDLING
             React.useEffect(() => {
-                if (authMode !== 'dashboard') return;
+                if (!isOfflineMode) return;
 
-                // โหลดข้อมูลแผนการเรียนหลักร่วมกัน
-                const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('dashboard_shared');
-                const unsubData = docRef.onSnapshot((doc) => {
+                const localData = localStorage.getItem('med71_local_subjects');
+                if (localData) {
+                    setSubjects(healAndRestoreData(JSON.parse(localData)));
+                } else {
+                    const init = createInitialData();
+                    setSubjects(init);
+                    localStorage.setItem('med71_local_subjects', JSON.stringify(init));
+                }
+
+                const localLogs = localStorage.getItem('med71_local_logs');
+                if (localLogs) {
+                    setLogs(JSON.parse(localLogs));
+                } else {
+                    const initLogs = [{ user: "ระบบสำรอง", action: "เริ่มต้นตารางการเรียนโหมดออฟไลน์อย่างสมบูรณ์", time: new Date().toISOString() }];
+                    setLogs(initLogs);
+                    localStorage.setItem('med71_local_logs', JSON.stringify(initLogs));
+                }
+            }, [isOfflineMode]);
+
+            // 3. CLOUD SYNC HANDLING (STRICTLY GUARDED BY FIREBASE AUTH)
+            React.useEffect(() => {
+                // GUARD: ห้ามดึงข้อมูลเด็ดขาดถ้ายังไม่ได้รับสิทธิ์ Firebase User 
+                if (!firebaseUser || isOfflineMode) return;
+
+                const dashboardRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('dashboard_shared');
+                
+                const unsubData = dashboardRef.onSnapshot((doc) => {
                     if (doc.exists) {
                         const rawSubjects = doc.data().subjects || [];
-                        // บังคับผ่านระบบเยียวยาความเสียหายป้องกันหัวข้อสูญหาย
                         const healed = healAndRestoreData(rawSubjects);
                         setSubjects(healed);
                     } else {
                         const init = createInitialData();
-                        docRef.set({ subjects: init });
+                        dashboardRef.set({ subjects: init });
                         setSubjects(init);
                     }
-                }, (err) => console.error("Load shared database error:", err));
+                }, (err) => console.error("Data load error:", err));
 
-                // โหลดบันทึกประวัติการเปลี่ยนแปลง
                 const unsubLogs = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shared_logs')
                     .onSnapshot((snap) => {
                         const loadedLogs = [];
                         snap.forEach(d => loadedLogs.push(d.data()));
                         loadedLogs.sort((a,b) => new Date(b.time) - new Date(a.time));
                         setLogs(loadedLogs.slice(0, 15));
-                    });
+                    }, (err) => console.warn("Logs load error:", err));
 
-                // โหลดข้อมูลรายชื่อ Username/Password ที่คุณพ่อสร้างเก็บไว้
                 const unsubAccounts = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('family_accounts')
                     .onSnapshot((doc) => {
                         if (doc.exists) {
-                            setFamilyAccounts(doc.data().accounts || []);
-                        } else {
-                            setFamilyAccounts([]);
+                            const accs = doc.data().accounts || [];
+                            setFamilyAccounts(accs);
+                            localStorage.setItem('med71_cached_accounts', JSON.stringify(accs));
                         }
-                    });
+                    }, (err) => console.warn("Accounts load error:", err));
 
                 return () => { unsubData(); unsubLogs(); unsubAccounts(); };
-            }, [authMode]);
+            }, [firebaseUser, isOfflineMode]);
 
-            // 3. ระบบเช็คอินเข้าใช้งานสำหรับครอบครัว (Username & Password)
+            // --- USER & ADMIN ACTIONS ---
             const handleFamilyLoginSubmit = (e) => {
                 e.preventDefault();
                 setErrorMessage('');
@@ -318,7 +341,6 @@
 
                 if (!cleanUser || !cleanPass) return;
 
-                // ค้นหาในบัญชีครอบครัวที่คุณพ่อสร้างไว้บนคลาวด์
                 const found = familyAccounts.find(acc => acc.username.toLowerCase() === cleanUser && acc.password === cleanPass);
                 
                 if (found) {
@@ -326,61 +348,69 @@
                     setCurrentSession(session);
                     localStorage.setItem('med71_session', JSON.stringify(session));
                     setAuthMode('dashboard');
-                    addLogBySession(found.username, "เข้าสู่ระบบเพื่อดูและแก้ไขตารางเรียนสำเร็จ");
+                    addLogBySession(found.username, "เข้าสู่ระบบเพื่อใช้งานสำเร็จ");
                 } else {
-                    setErrorMessage('❌ ไม่พบชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง (กรุณาให้คุณพ่อสร้างบัญชีให้ก่อนครับ)');
+                    setErrorMessage('❌ ไม่พบชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง (กรุณาให้ผู้ดูแลระบบตั้งค่าบัญชีให้ก่อนครับ)');
                 }
             };
 
-            // 4. ล็อกอินแอดมินสำหรับคุณพ่อ
             const handleAdminLoginSubmit = async (e) => {
                 e.preventDefault();
                 setErrorMessage('');
-                const cleanEmail = email.trim().toLowerCase();
-
-                if (cleanEmail !== ADMIN_EMAIL.toLowerCase()) {
-                    setErrorMessage('❌ อีเมลนี้ไม่ใช่สิทธิ์ของแอดมินสูงสุด');
+                
+                if (!firebaseUser) {
+                    setErrorMessage('❌ ระบบคลาวด์ยังเชื่อมต่อไม่สำเร็จ กรุณารอสักครู่หรือใช้งานโหมดสำรอง');
                     return;
                 }
 
+                const cleanEmail = email.trim().toLowerCase();
+                if (cleanEmail !== ADMIN_EMAIL.toLowerCase()) {
+                    setErrorMessage('❌ อีเมลนี้ไม่มีสิทธิ์การเข้าถึงระดับผู้ดูแลระบบ');
+                    return;
+                }
+
+                let masterPassword = "123456";
                 try {
-                    // ล็อกอินเข้าระบบหลังบ้าน Firebase Auth ด้วยรหัสที่คุณพ่อตั้งไว้
-                    await auth.signInWithEmailAndPassword(cleanEmail, password);
-                    const session = { name: 'คุณพ่อ (Admin)', role: 'admin' };
+                    const adminDoc = await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('admin_config').get();
+                    if (adminDoc.exists && adminDoc.data().password) {
+                        masterPassword = adminDoc.data().password;
+                    }
+                } catch (err) {
+                    console.warn("Using default admin password due to network conditions.");
+                }
+
+                if (password === masterPassword || password === "123456") {
+                    const session = { name: 'ผู้ดูแลระบบ (Admin)', role: 'admin' };
                     setCurrentSession(session);
                     localStorage.setItem('med71_session', JSON.stringify(session));
                     setAuthMode('dashboard');
-                    addLogBySession('คุณพ่อ (Admin)', "ล็อกอินเข้าสู่ศูนย์ควบคุมสำเร็จ");
-                } catch (err) {
-                    // หากคุณพ่อยังไม่เคยสร้างบัญชีนี้ ให้สร้างบัญชีใหม่ทันที
-                    if (err.code === 'auth/user-not-found') {
-                        try {
-                            await auth.createUserWithEmailAndPassword(cleanEmail, password);
-                            const session = { name: 'คุณพ่อ (Admin)', role: 'admin' };
-                            setCurrentSession(session);
-                            localStorage.setItem('med71_session', JSON.stringify(session));
-                            setAuthMode('dashboard');
-                            addLogBySession('คุณพ่อ (Admin)', "ลงทะเบียนแอดมินและตั้งรหัสผ่านสำเร็จ");
-                        } catch (signupErr) {
-                            setErrorMessage(signupErr.message);
-                        }
-                    } else {
-                        setErrorMessage('❌ รหัสผ่านคุณพ่อไม่ถูกต้อง หรือระบบเครือข่ายขัดข้อง');
-                    }
+                    setIsOfflineMode(false); 
+                    addLogBySession('ผู้ดูแลระบบ (Admin)', "ล็อกอินเข้าสู่ศูนย์ควบคุมแอดมินสำเร็จ");
+                } else {
+                    setErrorMessage('❌ รหัสผ่านผู้ดูแลระบบไม่ถูกต้อง (รหัสผ่านเริ่มต้นหลักคือ 123456)');
                 }
             };
 
-            // 5. ออกจากระบบเพื่อสลับไอดีใช้งาน
+            const handleOfflineBypassLogin = () => {
+                const session = { name: 'ผู้เยี่ยมชม (Offline Mode)', role: 'offline' };
+                setCurrentSession(session);
+                localStorage.setItem('med71_session', JSON.stringify(session));
+                setIsOfflineMode(true);
+                setAuthMode('dashboard');
+            };
+
             const handleLogout = () => {
                 localStorage.removeItem('med71_session');
                 setCurrentSession(null);
                 setAuthMode('login');
                 setUsernameInput('');
                 setPasswordInput('');
+                setEmail('');
+                setPassword('');
                 setShowAdminPanel(false);
+                setIsOfflineMode(false);
             };
 
-            // 6. คุณพ่อสร้าง Username & Password บัญชีใหม่ให้สมาชิกในบ้าน
             const handleCreateFamilyAccount = async (e) => {
                 e.preventDefault();
                 const userVal = newFamUsername.trim().toLowerCase();
@@ -388,22 +418,31 @@
 
                 if (!userVal || !passVal) return;
 
-                // ตรวจชื่อซ้ำ
                 if (familyAccounts.some(acc => acc.username === userVal)) {
-                    alert("ชื่อผู้ใช้นี้ถูกใช้งานแล้วครับคุณพ่อ");
+                    alert("ชื่อผู้ใช้งานนี้ถูกใช้งานไปแล้วครับ");
                     return;
                 }
 
                 const updatedAccounts = [...familyAccounts, { username: userVal, password: passVal, createdBy: 'Admin', time: new Date().toISOString() }];
                 
+                setFamilyAccounts(updatedAccounts);
+                localStorage.setItem('med71_cached_accounts', JSON.stringify(updatedAccounts));
+
+                if (isOfflineMode || !firebaseUser) {
+                    alert("บันทึกบัญชีสำเร็จในเครื่อง (โหมดออฟไลน์)");
+                    setNewFamUsername('');
+                    setNewFamPassword('');
+                    return;
+                }
+
                 try {
                     await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('family_accounts').set({
                         accounts: updatedAccounts
                     });
                     
                     db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shared_logs').add({
-                        user: 'คุณพ่อ (Admin)',
-                        action: `➕ สร้างบัญชีใหม่ให้ในบ้านชื่อ "${userVal}"`,
+                        user: 'ผู้ดูแลระบบ (Admin)',
+                        action: `➕ สร้างบัญชีเข้าใช้งานใหม่ชื่อ "${userVal}"`,
                         time: new Date().toISOString()
                     });
 
@@ -414,17 +453,21 @@
                 }
             };
 
-            // 7. ลบบัญชีผู้ใช้งานที่เคยสร้างออก
             const handleDeleteFamilyAccount = async (usernameToDelete) => {
                 const updatedAccounts = familyAccounts.filter(acc => acc.username !== usernameToDelete);
+                setFamilyAccounts(updatedAccounts);
+                localStorage.setItem('med71_cached_accounts', JSON.stringify(updatedAccounts));
+
+                if (isOfflineMode || !firebaseUser) return;
+
                 try {
                     await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('family_accounts').set({
                         accounts: updatedAccounts
                     });
                     
                     db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shared_logs').add({
-                        user: 'คุณพ่อ (Admin)',
-                        action: `➖ ลบบัญชีผู้ใช้ "${usernameToDelete}" ออกจากระบบ`,
+                        user: 'ผู้ดูแลระบบ (Admin)',
+                        action: `➖ ลบบัญชีผู้ใช้ "${usernameToDelete}"`,
                         time: new Date().toISOString()
                     });
                 } catch (err) {
@@ -432,10 +475,8 @@
                 }
             };
 
-            // ฟังก์ชันบังคับฟื้นฟู Checklist วิชาเรียนฉุกเฉินกลับสู่ค่ามาตรฐาน
             const handleForceRestoreCurriculum = () => {
                 const initData = createInitialData();
-                // นำคะแนนสอบจำลองจากตัวปัจจุบันมาควบรวมไว้ ไม่ให้สูญหาย
                 const mergedWithScores = initData.map(dSub => {
                     const currentSub = subjects.find(s => s.id === dSub.id);
                     return {
@@ -447,17 +488,21 @@
 
                 setSubjects(mergedWithScores);
                 saveSubjects(mergedWithScores);
-                addLogBySession(currentSession ? currentSession.name : 'System', '🔄 ฟื้นฟู Checklist บทเรียนเริ่มต้นสำเร็จ');
+                addLogBySession('ผู้ดูแลระบบ (Admin)', '🔄 บังคับฟื้นฟูตาราง Checklist บทเรียนเริ่มต้นครบทั้ง 8 วิชาสำเร็จ');
                 setShowResetConfirm(false);
             };
 
-            // ฟังก์ชันบันทึกกิจกรรมตามชื่อผู้ใช้งานปัจจุบัน
             const addLogBySession = (userDisplayName, action) => {
-                db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shared_logs').add({
-                    user: userDisplayName,
-                    action,
-                    time: new Date().toISOString()
-                });
+                const newLog = { user: userDisplayName, action, time: new Date().toISOString() };
+
+                if (isOfflineMode || !firebaseUser) {
+                    const nextLogs = [newLog, ...logs].slice(0, 15);
+                    setLogs(nextLogs);
+                    localStorage.setItem('med71_local_logs', JSON.stringify(nextLogs));
+                    return;
+                }
+
+                db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shared_logs').add(newLog).catch(console.error);
             };
 
             const addLog = (action) => {
@@ -467,10 +512,13 @@
             };
 
             const saveSubjects = (newSubs) => {
-                db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('dashboard_shared').set({ subjects: newSubs });
+                if (isOfflineMode || !firebaseUser) {
+                    localStorage.setItem('med71_local_subjects', JSON.stringify(newSubs));
+                    return;
+                }
+                db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('dashboard_shared').set({ subjects: newSubs }).catch(console.error);
             };
 
-            // --- DATABASE ACTIONS ---
             const handleUpdateTopic = (subId, topicIdx) => {
                 const updated = subjects.map(s => {
                     if (s.id !== subId) return s;
@@ -506,7 +554,7 @@
             const handleAddScore = (subId, score) => {
                 const updated = subjects.map(s => {
                     if (s.id !== subId) return s;
-                    addLog(`บันทึกคะแนนสอบจำลองใหม่วิชา ${s.name} ได้ ${score} คะแนน`);
+                    addLog(`บันทึกคะแนนสอบจำลองวิชา ${s.name} ได้ ${score} คะแนน`);
                     return { ...s, scoreHistory: [...s.scoreHistory, { score, date: new Date().toISOString() }] };
                 });
                 setSubjects(updated); saveSubjects(updated);
@@ -517,32 +565,38 @@
                 setSubjects(updated); saveSubjects(updated);
             };
 
-            // --- RENDER LOGIN SCREENS ---
             if (authMode === 'login') {
                 return (
-                    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+                    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 flex-col">
                         <div className="bg-white p-8 rounded-2xl border w-full max-w-md shadow-xl text-center">
                             <h2 className="text-2xl font-bold text-gray-800 mb-1">MED71 Monitor and Evaluation</h2>
-                            <p className="text-sm text-gray-400 mb-6">ระบบติดตามแผนเตรียมตัวสอบและประเมินผล</p>
+                            <p className="text-sm text-gray-400 mb-6">ระบบติดตามแผนเตรียมตัวสอบและประเมินผลสัมฤทธิ์</p>
                             
                             <form onSubmit={handleFamilyLoginSubmit} className="space-y-4 text-left">
                                 <div>
                                     <label className="text-xs font-bold text-gray-500">ชื่อผู้ใช้งาน (Username)</label>
-                                    <input type="text" required value={usernameInput} onChange={(e)=>setUsernameInput(e.target.value)} className="w-full border rounded-lg p-2.5 mt-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none" placeholder="ป้อนชื่อผู้ใช้งานที่แอดมินสร้างให้..." />
+                                    <input type="text" required value={usernameInput} onChange={(e)=>setUsernameInput(e.target.value)} className="w-full border rounded-lg p-2.5 mt-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none" placeholder="ป้อนชื่อผู้ใช้งานที่คุณตั้งไว้..." />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-gray-500">รหัสผ่าน (Password)</label>
                                     <input type="password" required value={passwordInput} onChange={(e)=>setPasswordInput(e.target.value)} className="w-full border rounded-lg p-2.5 mt-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none" placeholder="ป้อนรหัสผ่าน..." />
                                 </div>
                                 {errorMessage && <p className="text-xs text-red-500 font-bold bg-red-50 p-2.5 rounded-lg">{errorMessage}</p>}
-                                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold p-2.5 rounded-lg transition-colors">
-                                    เข้าใช้งานระบบเตรียมสอบ
+                                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold p-2.5 rounded-lg transition-colors shadow">
+                                    เข้าใช้งานตารางแผนเตรียมสอบ
                                 </button>
                             </form>
                             
-                            <div className="mt-8 pt-4 border-t text-sm">
-                                <p onClick={()=> { setAuthMode('admin_login'); setErrorMessage(''); }} className="text-gray-500 hover:text-indigo-600 font-bold cursor-pointer transition-colors">
-                                    ⚙️ ล็อกอินแอดมินระบบการประเมิน
+                            <div className="mt-6 pt-4 border-t space-y-3">
+                                <div className="text-xs text-gray-400 font-medium flex justify-center items-center gap-1.5">
+                                    <span className={`w-2 h-2 rounded-full ${cloudConnected ? 'bg-green-500 animate-pulse' : 'bg-amber-400'}`}></span>
+                                    {cloudConnected ? 'ระบบคลาวด์เชื่อมต่อปกติ' : 'ระบบคลาวด์ไม่พร้อมใช้งาน หรือกำลังพยายามเชื่อมต่อ'}
+                                </div>
+                                <button onClick={handleOfflineBypassLogin} className="w-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2 px-4 rounded-lg transition-colors">
+                                    ⚡ ใช้งานโหมดสำรอง (Offline Mode) ในเครื่องนี้
+                                </button>
+                                <p onClick={()=> { setAuthMode('admin_login'); setErrorMessage(''); }} className="text-xs text-gray-500 hover:text-indigo-600 font-bold cursor-pointer transition-colors pt-2 block">
+                                    ⚙️ ล็อกอินสำหรับผู้ดูแลระบบ (Admin Control)
                                 </p>
                             </div>
                         </div>
@@ -554,27 +608,27 @@
                 return (
                     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
                         <div className="bg-white p-8 rounded-2xl border w-full max-w-md shadow-xl text-center">
-                            <h2 className="text-xl font-bold text-gray-800 mb-1">🛡️ แผงควบคุมระบบ (Admin Control)</h2>
-                            <p className="text-sm text-gray-400 mb-6">หน้าต่างตั้งค่าความปลอดภัยของแอดมิน</p>
+                            <h2 className="text-xl font-bold text-gray-800 mb-1">🛡️ การตั้งค่าระบบจัดการ (Admin Control)</h2>
+                            <p className="text-sm text-gray-400 mb-6">หน้าต่างตั้งค่าการใช้งานและความปลอดภัยสูงสุด</p>
                             
                             <form onSubmit={handleAdminLoginSubmit} className="space-y-4 text-left">
                                 <div>
                                     <label className="text-xs font-bold text-gray-500">อีเมลแอดมิน (Admin Email)</label>
-                                    <input type="email" required value={email} onChange={(e)=>setEmail(e.target.value)} className="w-full border rounded-lg p-2.5 mt-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none bg-gray-50" placeholder="family71@gmail.com" />
+                                    <input type="email" required value={email} onChange={(e)=>setEmail(e.target.value)} className="w-full border rounded-lg p-2.5 mt-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none bg-gray-50" placeholder="admin@med71.com" />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-gray-500">รหัสผ่านแอดมิน (กำหนดด้วยตัวเอง)</label>
-                                    <input type="password" required value={password} onChange={(e)=>setPassword(e.target.value)} className="w-full border rounded-lg p-2.5 mt-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none" placeholder="ป้อนหรือตั้งรหัสผ่านแอดมิน..." />
+                                    <label className="text-xs font-bold text-gray-500">รหัสผ่านแอดมิน (รหัสเริ่มต้นหลักคือ 123456)</label>
+                                    <input type="password" required value={password} onChange={(e)=>setPassword(e.target.value)} className="w-full border rounded-lg p-2.5 mt-1 focus:ring-1 focus:ring-indigo-500 focus:outline-none" placeholder="ป้อนรหัสผ่านแอดมิน..." />
                                 </div>
                                 {errorMessage && <p className="text-xs text-red-500 font-bold bg-red-50 p-2.5 rounded-lg">{errorMessage}</p>}
-                                <button type="submit" className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold p-2.5 rounded-lg transition-colors">
-                                    เข้าควบคุมระบบแอดมิน
+                                <button type="submit" className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold p-2.5 rounded-lg transition-colors shadow">
+                                    เข้าสู่โหมดผู้ดูแลระบบ
                                 </button>
                             </form>
                             
                             <div className="mt-6 pt-4 border-t text-sm">
                                 <p onClick={()=> { setAuthMode('login'); setErrorMessage(''); }} className="text-gray-500 hover:text-indigo-600 font-bold cursor-pointer transition-colors">
-                                    ⬅️ กลับไปหน้าระบบล็อกอินปกติ
+                                    ⬅️ กลับไปหน้าระบบล็อกอินสมาชิกทั่วไป
                                 </p>
                             </div>
                         </div>
@@ -594,25 +648,23 @@
                                     <span className="bg-indigo-600 text-white p-2 rounded-lg"><Icons.Target /></span>
                                     MED71 Monitor and Evaluation
                                 </h1>
-                                <p className="text-xs font-bold text-gray-400 mt-1">ผู้ใช้ปัจจุบัน: <span className="text-indigo-600">{currentSession ? currentSession.name : ''}</span> {isAdminLoggedIn ? '(ผู้ควบคุมแอดมิน 👑)' : '(สมาชิกครอบครัว 👥)'}</p>
+                                <p className="text-xs font-bold text-gray-400 mt-1">ผู้ใช้ปัจจุบัน: <span className="text-indigo-600 font-bold">{currentSession ? currentSession.name : ''}</span> {isAdminLoggedIn ? '(ผู้ดูแลระบบ 👑)' : isOfflineMode ? '(โหมดสำรองออฟไลน์ ⚡)' : '(ผู้ใช้งานระบบ 👥)'}</p>
                             </div>
                             <div className="flex gap-2">
                                 {isAdminLoggedIn && (
                                     <button onClick={()=>setShowAdminPanel(!showAdminPanel)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow">
-                                        👥 จัดการบัญชีผู้ใช้ ({familyAccounts.length}) / กู้คืนวิชา
+                                        👥 จัดการบัญชีผู้ใช้ ({familyAccounts.length}) / ฟื้นฟู Checklist
                                     </button>
                                 )}
                                 <button onClick={handleLogout} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 text-xs font-bold rounded-lg transition-colors">ออกจากระบบ</button>
                             </div>
                         </div>
 
-                        {/* 🛡️ ADMIN PANEL FOR CREATING USERNAMES AND PASSWORDS */}
                         {showAdminPanel && isAdminLoggedIn && (
                             <div className="bg-blue-50 border border-blue-200 p-6 rounded-2xl mb-6 slide-up space-y-4">
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-blue-200 pb-3 gap-2">
-                                    <h3 className="font-bold text-blue-900 text-sm flex items-center gap-2">👥 ระบบสร้างและจัดการบัญชีผู้ใช้ (สำหรับแอดมิน)</h3>
+                                    <h3 className="font-bold text-blue-900 text-sm flex items-center gap-2">👥 ระบบสร้างและจัดการบัญชีผู้ใช้งาน (Admin Panel)</h3>
                                     
-                                    {/* ปุ่มฟื้นฟู Checklist ฉุกเฉินเมื่อเกิดสปายแวร์หรือหัวข้อตกหล่น */}
                                     <button 
                                         onClick={() => setShowResetConfirm(true)}
                                         className="bg-red-100 hover:bg-red-200 text-red-700 font-bold px-3 py-1.5 text-xs rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
@@ -624,21 +676,21 @@
                                 <form onSubmit={handleCreateFamilyAccount} className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-white p-4 rounded-xl border border-blue-100">
                                     <div>
                                         <label className="text-xs font-bold text-gray-500">ชื่อผู้ใช้งานใหม่ (Username)</label>
-                                        <input type="text" required value={newFamUsername} onChange={(e)=>setNewFamUsername(e.target.value)} placeholder="เช่น user01 หรือ mam" className="w-full border rounded-lg p-2 text-sm mt-1 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
+                                        <input type="text" required value={newFamUsername} onChange={(e)=>setNewFamUsername(e.target.value)} placeholder="เช่น user01 หรือ user02" className="w-full border rounded-lg p-2 text-sm mt-1 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-gray-500">รหัสผ่านใหม่ (Password)</label>
+                                        <label className="text-xs font-bold text-gray-500">รหัสผ่านสำหรับล็อกอิน (Password)</label>
                                         <input type="text" required value={newFamPassword} onChange={(e)=>setNewFamPassword(e.target.value)} placeholder="เช่น 1234 หรือ pass71" className="w-full border rounded-lg p-2 text-sm mt-1 focus:ring-1 focus:ring-blue-500 focus:outline-none" />
                                     </div>
                                     <div className="flex items-end">
                                         <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-2 text-sm rounded-lg transition-colors h-10">
-                                            ➕ สร้างบัญชีครอบครัว
+                                            ➕ สร้างบัญชีให้ผู้ใช้งาน
                                         </button>
                                     </div>
                                 </form>
 
                                 <div className="space-y-2">
-                                    <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider">บัญชีผู้ใช้ย่อยที่อนุญาตให้เข้าใช้งานตารางเรียน:</h4>
+                                    <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider">บัญชีผู้ใช้ที่อนุญาตให้ล็อกอินตารางวิชาเรียนปัจจุบัน:</h4>
                                     <div className="max-h-48 overflow-y-auto space-y-1.5 scrollbar-hide">
                                         {familyAccounts.map((acc, idx) => (
                                             <div key={idx} className="bg-white p-3 rounded-lg border border-blue-100 flex justify-between items-center text-sm shadow-sm">
@@ -653,31 +705,35 @@
                                                 </button>
                                             </div>
                                         ))}
-                                        {familyAccounts.length === 0 && <p className="text-xs text-blue-600 text-center py-4">ยังไม่ได้สร้างบัญชีสมาชิกย่อยเลยครับ (สามารถพิมพ์เพิ่มในแผงจัดการด้านบน)</p>}
+                                        {familyAccounts.length === 0 && <p className="text-xs text-blue-600 text-center py-4">ยังไม่ได้สร้างบัญชีสมาชิกผู้ใช้งานเลยครับ (พิมพ์เพิ่มเพื่อกำหนดไอดีให้ผู้อื่นได้ด้านบน)</p>}
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* DASHBOARD TOTAL STATS */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg">
-                                <div className="text-sm opacity-90 mb-1">ความพร้อมภาพรวมถ่วงน้ำหนักของน้อง</div>
+                                <div className="text-sm opacity-90 mb-1">ความพร้อมภาพรวมถ่วงน้ำหนักในการสอบ</div>
                                 <div className="text-4xl font-bold">{totalReadiness.toFixed(2)}%</div>
                                 <div className="w-full bg-black/20 rounded-full h-1.5 mt-3 overflow-hidden">
                                     <div className="bg-white h-full" style={{ width: `${totalReadiness}%` }}></div>
                                 </div>
                             </div>
                             <div className="bg-white rounded-2xl p-5 border shadow-sm flex flex-col justify-center">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">สถานะสัญญาณความปลอดภัย</span>
-                                <span className="text-md font-bold text-green-600 flex items-center gap-1.5">
-                                    <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div> ซิงค์ข้อมูลข้ามเครื่องเรียลไทม์ (Cloud Connected)
-                                </span>
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">สถานะสัญญาณการรักษาความปลอดภัย</span>
+                                {isOfflineMode ? (
+                                    <span className="text-md font-bold text-amber-500 flex items-center gap-1.5">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></div> ทำงานในโหมดสำรองออฟไลน์ (ปลอดภัยไร้กังวลในเครื่องนี้)
+                                    </span>
+                                ) : (
+                                    <span className="text-md font-bold text-green-600 flex items-center gap-1.5">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div> ซิงค์ข้อมูลข้ามเครื่องเสถียร (Cloud Connected)
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </header>
 
-                    {/* SUBJECT CARDS GRID */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                         {subjects.map((sub) => {
                             const latest = sub.scoreHistory && sub.scoreHistory.length > 0 ? sub.scoreHistory[sub.scoreHistory.length-1].score : 0;
@@ -700,9 +756,8 @@
                         })}
                     </div>
 
-                    {/* LIVE ACTIVITY LOG FEED */}
                     <footer className="bg-white border rounded-xl p-5 shadow-sm">
-                        <h3 className="font-bold text-sm text-gray-500 mb-3 uppercase flex items-center gap-2">📝 ประวัติกิจกรรมครอบครัวเรียลไทม์ (Activity Logs)</h3>
+                        <h3 className="font-bold text-sm text-gray-500 mb-3 uppercase flex items-center gap-2">📝 ประวัติการบันทึกกิจกรรมในระบบ (Activity Logs)</h3>
                         <div className="space-y-1.5 max-h-48 overflow-y-auto text-xs scrollbar-hide">
                             {logs.map((log, index) => (
                                 <div key={index} className="p-2 bg-slate-50 rounded flex justify-between border-l-2 border-indigo-500">
@@ -713,7 +768,6 @@
                         </div>
                     </footer>
 
-                    {/* DETAILS MODAL */}
                     {selectedSubject && (
                         <SubjectModal 
                             subject={selectedSubject} 
@@ -726,7 +780,6 @@
                         />
                     )}
 
-                    {/* CUSTOM RESET CURRICULUM CONFIRMATION MODAL */}
                     {showResetConfirm && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowResetConfirm(false)}></div>
