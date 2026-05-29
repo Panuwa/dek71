@@ -3,18 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dek71 Mission Control: Deep Dive (Cloud Sync with Admin Approval)</title>
+    <title>Dek71 Mission Control: Deep Dive (Cloud Sync)</title>
     
-    <!-- React & Tailwind CSS via CDNJS -->
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Google Fonts (Noto Sans Thai) -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Firebase Compat SDKs (App, Auth, Firestore) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -22,41 +19,16 @@
     <style>
         body { font-family: 'Noto Sans Thai', sans-serif; background-color: #f8fafc; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
         .slide-up { animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
     </style>
 </head>
 <body>
-    <!-- Root Container สำหรับ React App -->
-    <div id="root" class="flex items-center justify-center min-h-screen text-gray-400">
-        <div class="text-center animate-pulse">
-            <p class="text-xl font-bold" id="loading-text">กำลังเชื่อมต่อฐานข้อมูลความปลอดภัยส่วนกลาง...</p>
-            <p class="text-sm mt-2">Dek71 Mission Control</p>
-        </div>
-    </div>
+    <div id="root"></div>
 
-    <!-- สคริปต์ฉุกเฉินกรณีเว็บค้างจาก Ad-blocker -->
-    <script>
-        setTimeout(function() {
-            var root = document.getElementById('root');
-            if (root && root.innerHTML.includes('กำลังเชื่อมต่อฐานข้อมูล')) {
-                root.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #ef4444; font-family: sans-serif; max-width: 500px; margin: auto;">
-                        <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">⚠️ ระบบแจ้งเตือนขัดข้อง</h3>
-                        <p style="color: #6b7280; font-size: 14px;">เครือข่ายบล็อกการเชื่อมต่อ Firebase หรือทรัพยากรโหลดไม่สมบูรณ์</p>
-                        <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">ลองเข้าสู่ระบบอีกครั้ง</button>
-                    </div>
-                `;
-            }
-        }, 10000);
-    </script>
-
-    <!-- React Application Logic -->
     <script type="text/babel">
         // ==========================================
-        // --- 1. FIREBASE CONFIGURATION & INITIALIZATION ---
+        // --- 1. FIREBASE CONFIGURATION ---
         // ==========================================
         const firebaseConfig = {
           apiKey: "AIzaSyDXQ9TIM1NbyR-PJNbVO74Cf_1w3hDWuGM",
@@ -68,23 +40,11 @@
           measurementId: "G-YDCNM0C1FR"
         };
 
-        // 🌟 บังคับใช้อีเมล Admin หลักเป็นพิมพ์เล็กเสมอเพื่อป้องกันความสับสน 🌟
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const appId = 'dek71-mission-control';
         const ADMIN_EMAIL = "family71@gmail.com";
-
-        let db = null;
-        let auth = null;
-
-        try {
-            if (typeof firebase !== 'undefined') {
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(firebaseConfig);
-                }
-                db = firebase.firestore();
-                auth = firebase.auth();
-            }
-        } catch (e) {
-            console.error("Firebase Initialization Error:", e);
-        }
 
         // ==========================================
         // --- 2. MASTER CURRICULUM DATA ---
@@ -94,7 +54,7 @@
             math1: ["เซต & ตรรกศาสตร์", "จำนวนจริง", "ฟังก์ชัน", "เรขาคณิตวิเคราะห์ & ภาคตัดกรวย", "ฟังก์ชันเอกซ์โพ & ลอการิทึม", "ฟังก์ชันตรีโกณมิติ", "เมทริกซ์", "เวกเตอร์", "จำนวนเชิงซ้อน", "หลักการนับ & ความน่าจะเป็น", "ลำดับและอนุกรม", "แคลคูลัสเบื้องต้น", "สถิติและการแจกแจงความน่าจะเป็น"],
             phy: ["ธรรมชาติและพัฒนาการทางฟิสิกส์", "การเคลื่อนที่แนวตรง", "แรงและกฎการเคลื่อนที่", "สมดุลกล", "งานและพลังงาน", "โมเมนตัมและการชน", "การเคลื่อนที่แนวโค้ง", "การเคลื่อนที่แบบฮาร์มอนิกฯ", "คลื่น", "แสงเชิงคลื่น", "แสงเชิงรังสี", "เสียง", "ไฟฟ้าสถิต", "ไฟฟ้ากระแส", "แม่เหล็กและไฟฟ้า", "ความร้อนและแก๊ส", "ของแข็งและของไหล", "ฟิสิกส์อะตอม", "ฟิสิกส์นิวเคลียร์"],
             chem: ["ความปลอดภัยและทักษะฯ", "อะตอมและสมบัติของธาตุ", "พันธะเคมี", "โมลและสูตรเคมี", "สารละลาย", "ปริมาณสารสัมพันธ์", "แก๊สและสมบัติของแก๊ส", "อัตราการเกิดปฏิกิริยาเคมี", "สมดุลเคมี", "กรด-เบส", "เคมีไฟฟ้า", "เคมีอินทรีย์", "พอลิเมอร์", "เคมีกับการแก้ปัญหา"],
-            bio: ["ธรรมชาติของสิ่งมีชีวิต", "เคมีที่เป็นพื้นฐานของสิ่งมีชีวิต", "เซลล์และการทำงานของเซลล์", "ระบบย่อยอาหาร", "ระบบหายใจ", "ระบบหมุนเวียนเลือด", "ระบบภูมิคุ้มกัน", "ระบบขับถ่าย", "ระบบประสาท and อวัยวะรับความรู้สึก", "ระบบต่อมไร้ท่อ", "การเคลื่อนที่ของสิ่งมีชีวิต", "การสืบพันธุ์และการเจริญเติบโต", "พืช: โครงสร้างและหน้าที่", "พืช: การสังเคราะห์ด้วยแสง", "พืช: การสืบพันธุ์", "พันธุศาสตร์และวิวัฒนาการ", "ระบบนิเวศ"],
+            bio: ["ธรรมชาติของสิ่งมีชีวิต", "เคมีที่เป็นพื้นฐานของสิ่งมีชีวิต", "เซลล์และการทำงานของเซลล์", "ระบบย่อยอาหาร", "ระบบหายใจ", "ระบบหมุนเวียนเลือด", "ระบบภูมิคุ้มกัน", "ระบบขับถ่าย", "ระบบประสาทและอวัยวะรับความรู้สึก", "ระบบต่อมไร้ท่อ", "การเคลื่อนที่ของสิ่งมีชีวิต", "การสืบพันธุ์และการเจริญเติบโต", "พืช: โครงสร้างและหน้าที่", "พืช: การสังเคราะห์ด้วยแสง", "พืช: การสืบพันธุ์", "พันธุศาสตร์และวิวัฒนาการ", "ระบบนิเวศ"],
             eng: ["Vocabulary (3000 คำ)", "Reading: Advertisements/News", "Reading: Articles/Research", "Conversation: Daily life", "Conversation: Situational", "Grammar & Structure", "Writing: Paragraph Organization"],
             thai: ["หลักการใช้ภาษาไทย", "การอ่านจับใจความ", "การเขียนเพื่อการสื่อสาร", "วรรณคดีวิจารณ์"],
             soc: ["ศาสนา ศีลธรรม จริยธรรม", "หน้าที่พลเมือง", "เศรษฐศาสตร์", "ประวัติศาสตร์", "ภูมิศาสตร์"]
@@ -106,21 +66,14 @@
             Brain: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,
             Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
             Close: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-            Edit: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
             Trophy: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10"/><path d="M17 4v6a5 5 0 1 1-10 0V4"/><line x1="7" y1="9" x2="17" y2="9"/></svg>,
-            Refresh: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
             Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
             Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
             Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-            Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
-            Logout: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
-            User: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-            Lock: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
-            Shield: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
-            Alert: () => <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         };
 
-        // --- PROGRESS CHART COMPONENT ---
+        // --- GRAPH COMPONENT ---
         const ScoreChart = ({ history, targetScore }) => {
             if (!history || history.length < 2) return (
                 <div className="flex flex-col items-center justify-center h-32 bg-gray-50 rounded-lg border border-dashed border-gray-200 text-gray-400 text-xs">
@@ -128,905 +81,416 @@
                     <span className="mt-2 text-center">บันทึกคะแนนสอบจำลองอย่างน้อย 2 ครั้งเพื่อวิเคราะห์สถิติกราฟแนวโน้ม</span>
                 </div>
             );
-
-            const height = 120;
-            const width = 500;
-            const padding = 20;
-            const maxScore = 100;
+            const height = 120; const width = 500; const padding = 20; const maxScore = 100;
             const xStep = (width - padding * 2) / (history.length - 1);
-            
-            const points = history.map((entry, index) => {
-                const x = padding + index * xStep;
-                const y = height - padding - (entry.score / maxScore) * (height - padding * 2);
-                return `${x},${y}`;
-            }).join(' ');
-
+            const points = history.map((entry, idx) => `${padding + idx * xStep},${height - padding - (entry.score / maxScore) * (height - padding * 2)}`).join(' ');
             const targetY = height - padding - (targetScore / maxScore) * (height - padding * 2);
-
             return (
                 <div className="w-full overflow-hidden mb-6">
                     <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full bg-white rounded-lg border border-gray-100 shadow-sm">
-                        <line x1={padding} y1={height-padding} x2={width-padding} y2={height-padding} stroke="#e5e7eb" strokeWidth="1" />
-                        <line x1={padding} y1={padding} x2={width-padding} y2={padding} stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4" />
-                        {targetScore > 0 && <line x1={padding} y1={targetY} x2={width-padding} y2={targetY} stroke="#10b981" strokeWidth="1" strokeDasharray="4" opacity="0.5" />}
-                        <polyline points={points} fill="none" stroke="#4f46e5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        {history.map((entry, index) => {
-                            const x = padding + index * xStep;
-                            const y = height - padding - (entry.score / maxScore) * (height - padding * 2);
-                            return (
-                                <g key={index}>
-                                    <circle cx={x} cy={y} r="4" fill="#fff" stroke="#4f46e5" strokeWidth="2" />
-                                    <text x={x} y={y - 10} textAnchor="middle" fontSize="10" fill="#6b7280">{entry.score}</text>
-                                    <text x={x} y={height - 5} textAnchor="middle" fontSize="8" fill="#9ca3af">{new Date(entry.date).toLocaleDateString('th-TH', {day:'numeric', month:'short'})}</text>
-                                </g>
-                            );
-                        })}
+                        <line x1={padding} y1={height-padding} x2={width-padding} y2={height-padding} stroke="#e5e7eb" />
+                        <line x1={padding} y1={padding} x2={width-padding} y2={padding} stroke="#e5e7eb" strokeDasharray="4" />
+                        {targetScore > 0 && <line x1={padding} y1={targetY} x2={width-padding} y2={targetY} stroke="#10b981" strokeDasharray="4" opacity="0.5" />}
+                        <polyline points={points} fill="none" stroke="#4f46e5" strokeWidth="2" />
+                        {history.map((entry, idx) => (
+                            <g key={idx}>
+                                <circle cx={padding + idx * xStep} cy={height - padding - (entry.score / maxScore) * (height - padding * 2)} r="4" fill="#fff" stroke="#4f46e5" strokeWidth="2" />
+                                <text x={padding + idx * xStep} y={height - padding - (entry.score / maxScore) * (height - padding * 2) - 10} textAnchor="middle" fontSize="10" fill="#6b7280">{entry.score}</text>
+                            </g>
+                        ))}
                     </svg>
                 </div>
             );
         };
 
-        // --- LOGIN SCREEN (WITH SECURE REGISTRATION WRITE) ---
-        const LoginScreen = ({ onLoginSuccess }) => {
-            const [isRegister, setIsRegister] = React.useState(false);
-            const [email, setEmail] = React.useState('');
-            const [password, setPassword] = React.useState('');
-            const [error, setError] = React.useState('');
-            const [loading, setLoading] = React.useState(false);
-
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                setError('');
-                const cleanEmail = email.trim().toLowerCase();
-
-                if (!cleanEmail || !password) {
-                    setError('กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วนครับ');
-                    return;
-                }
-                if (password.length < 6) {
-                    setError('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษรครับ');
-                    return;
-                }
-
-                setLoading(true);
-                try {
-                    if (isRegister) {
-                        const userCredential = await auth.createUserWithEmailAndPassword(cleanEmail, password);
-                        const user = userCredential.user;
-                        
-                        // ปูระบบเขียนเอกสารขอคำร้องทันทีเมื่อสร้างไอดีสำเร็จ
-                        if (db) {
-                            await db.collection('user_approvals').doc(user.uid).set({
-                                email: cleanEmail,
-                                approved: cleanEmail === ADMIN_EMAIL,
-                                registeredAt: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                        }
-                    } else {
-                        await auth.signInWithEmailAndPassword(cleanEmail, password);
-                    }
-                } catch (err) {
-                    console.error("Auth error:", err);
-                    if (err.code === 'auth/user-not-found') {
-                        setError('ไม่พบผู้ใช้งานนี้ในระบบ กรุณาตรวจสอบอีเมลหรือเลือกแท็บสมัครใช้งานครับ');
-                    } else if (err.code === 'auth/wrong-password') {
-                        setError('รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้งครับ');
-                    } else if (err.code === 'auth/email-already-in-use') {
-                        setError('อีเมลนี้ถูกใช้งานแล้วในระบบครับ');
-                    } else if (err.code === 'auth/invalid-email') {
-                        setError('รูปแบบอีเมลไม่ถูกต้องครับ');
-                    } else if (err.code === 'auth/operation-not-allowed') {
-                        setError('ระบบลงชื่อเข้าใช้ด้วยอีเมลยังไม่เปิดใช้งานใน Firebase Console ของคุณพ่อ (กรุณาทำตามคู่มือบนหน้าจอ)');
-                    } else {
-                        setError(err.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบฐานข้อมูล');
-                    }
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            return (
-                <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 max-w-md w-full slide-up">
-                        <div className="text-center mb-8">
-                            <div className="inline-block bg-indigo-600 text-white p-3.5 rounded-2xl mb-4 shadow-md">
-                                <Icons.Target />
-                            </div>
-                            <h2 className="text-2xl font-bold text-gray-800">Dek71 Mission Control</h2>
-                            <p className="text-sm text-gray-500 mt-1">ระบบวิเคราะห์ข้อมูลและวางแผนเพื่อสติปัญญาศิษย์รุ่น 71</p>
-                        </div>
-
-                        {/* Tab Switcher */}
-                        <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
-                            <button 
-                                onClick={() => { setIsRegister(false); setError(''); }}
-                                className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${!isRegister ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
-                            >
-                                เข้าสู่ระบบ
-                            </button>
-                            <button 
-                                onClick={() => { setIsRegister(true); setError(''); }}
-                                className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${isRegister ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
-                            >
-                                สมัครใช้งานใหม่
-                            </button>
-                        </div>
-
-                        {error && (
-                            <div className="mb-4 p-3.5 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded-r-lg">
-                                {error}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wide">อีเมลผู้ใช้งาน</label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
-                                        <Icons.User />
-                                    </div>
-                                    <input 
-                                        type="email" 
-                                        required
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-gray-700"
-                                        placeholder="เช่น custom-name@gmail.com"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wide">รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)</label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
-                                        <Icons.Lock />
-                                    </div>
-                                    <input 
-                                        type="password" 
-                                        required
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-gray-700"
-                                        placeholder="••••••••"
-                                    />
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition-colors shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                {loading ? (
-                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                ) : (
-                                    isRegister ? 'สมัครและรอคุณพ่ออนุมัติ' : 'ลงชื่อเข้าใช้งาน'
-                                )}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- WAITING APPROVAL SCREEN ---
-        const WaitingApprovalScreen = ({ email, onSignOut }) => {
-            return (
-                <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50">
-                    <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 max-w-md w-full text-center slide-up">
-                        <div className="inline-block bg-amber-50 text-amber-500 p-4 rounded-full mb-4">
-                            <Icons.Alert />
-                        </div>
-                        <h2 className="text-xl font-bold text-gray-800">รอการอนุมัติสิทธิ์การใช้งาน</h2>
-                        <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-                            บัญชีผู้ใช้ <strong className="text-indigo-600 font-semibold">{email}</strong> สมัครลงทะเบียนเรียบร้อยแล้วครับ! ขณะนี้รอการตรวจสอบและกดยืนยันสิทธิ์จากคุณพ่อ (Admin) ผ่านหน้าหลัก จึงจะสามารถเข้าถึงระบบได้
-                        </p>
-                        <div className="mt-8 pt-6 border-t border-gray-100 flex gap-3">
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-xs transition-colors"
-                            >
-                                🔄 โหลดหน้าเว็บใหม่
-                            </button>
-                            <button
-                                onClick={onSignOut}
-                                className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-semibold rounded-xl text-xs transition-colors"
-                            >
-                                🚪 ออกจากระบบ
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- SUBJECT DETAIL MODAL ---
-        const SubjectModal = ({ subject, onClose, onUpdateTopic, onAddCustomTopic, onDeleteCustomTopic, onAddScore, onDeleteScore, onUpdateTarget }) => {
+        // --- SUBJECT MODAL COMPONENT ---
+        const SubjectModal = ({ subject, onClose, onUpdateTopic, onAddCustomTopic, onDeleteCustomTopic, onAddScore, onUpdateTarget }) => {
             if (!subject) return null;
             const [newScore, setNewScore] = React.useState('');
-            const [newDate, setNewDate] = React.useState(new Date().toISOString().split('T')[0]);
-            const [customTopicName, setCustomTopicName] = React.useState('');
-
-            const handleAddScore = () => {
-                if (newScore === '' || isNaN(newScore)) return;
-                onAddScore(subject.id, parseInt(newScore), newDate);
-                setNewScore('');
-            };
-
-            const handleAddCustomTopicSubmit = (e) => {
-                e.preventDefault();
-                if (!customTopicName.trim()) return;
-                onAddCustomTopic(subject.id, customTopicName.trim());
-                setCustomTopicName('');
-            };
-
-            const safeTopics = subject.topics || [];
-            const safeHistory = subject.scoreHistory || [];
-
+            const [customTopic, setCustomTopic] = React.useState('');
             return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
                     <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] shadow-2xl z-10 flex flex-col slide-up overflow-hidden">
-                        
-                        {/* Modal Header */}
-                        <div className={`p-6 ${subject.color} bg-opacity-10 border-b border-gray-100 flex justify-between items-start`}>
-                            <div className="flex gap-4">
-                                <div className={`p-3 rounded-xl ${subject.color} text-white shadow-sm`}>
-                                    {subject.icon === 'Brain' ? <Icons.Brain /> : subject.icon === 'Target' ? <Icons.Target /> : <Icons.Book />}
+                        <div className={`p-6 ${subject.color} bg-opacity-10 border-b border-gray-100 flex justify-between items-center`}>
+                            <h2 className="text-2xl font-bold text-gray-800">{subject.name}</h2>
+                            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400"><Icons.Close /></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+                            <div className="mb-6 bg-gray-50 rounded-xl p-5 border border-gray-100">
+                                <ScoreChart history={subject.scoreHistory} targetScore={subject.targetScore} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs text-gray-500 mb-1 block font-bold">🎯 เป้าหมาย (เต็ม 100)</label>
+                                        <input type="number" value={subject.targetScore || ''} onChange={(e) => onUpdateTarget(subject.id, e.target.value)} className="w-full border rounded p-2 text-indigo-600 font-bold" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500 mb-1 block font-bold">📝 เพิ่มผลสอบจำลอง</label>
+                                        <div className="flex gap-2">
+                                            <input type="number" value={newScore} onChange={(e) => setNewScore(e.target.value)} className="w-full border rounded p-2" placeholder="คะแนน" />
+                                            <button onClick={() => { if(newScore) { onAddScore(subject.id, parseInt(newScore)); setNewScore(''); } }} className="bg-gray-800 text-white px-4 rounded text-xs">เพิ่ม</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-sm text-gray-400 mb-3 uppercase">เช็คลิสต์เนื้อหาบทเรียน</h3>
+                                <div className="flex gap-2 mb-4">
+                                    <input type="text" value={customTopic} onChange={(e) => setCustomTopic(e.target.value)} placeholder="เพิ่มหัวข้อเรียนเฉพาะของน้อง..." className="flex-1 border rounded p-2 text-sm" />
+                                    <button onClick={() => { if(customTopic.trim()) { onAddCustomTopic(subject.id, customTopic.trim()); setCustomTopic(''); } }} className="bg-indigo-600 text-white px-4 rounded text-sm font-medium">เพิ่มเนื้อหา</button>
+                                </div>
+                                <div className="space-y-2">
+                                    {(subject.topics || []).map((topic, idx) => (
+                                        <div key={idx} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                                            <label className="flex items-center cursor-pointer flex-1">
+                                                <input type="checkbox" checked={topic.completed} onChange={() => onUpdateTopic(subject.id, idx)} className="h-4 w-4 rounded text-green-500 mr-3" />
+                                                <span className={`text-sm ${topic.completed ? 'text-gray-400 line-through' : 'text-gray-700 font-medium'}`}>{topic.name}</span>
+                                            </label>
+                                            <button onClick={() => onDeleteCustomTopic(subject.id, idx)} className="text-gray-300 hover:text-red-500"><Icons.Trash /></button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- AUTH & MAIN APP COMPONENT ---
+        const App = () => {
+            const [user, setUser] = React.useState(null);
+            const [isApproved, setIsApproved] = React.useState(false);
+            const [authMode, setAuthMode] = React.useState('login'); // login | register | pending
+            const [email, setEmail] = React.useState('');
+            const [password, setPassword] = React.useState('');
+            const [errorMessage, setErrorMessage] = React.useState('');
+            
+            const [subjects, setSubjects] = React.useState([]);
+            const [logs, setLogs] = React.useState([]);
+            const [approvals, setApprovals] = React.useState([]);
+            const [showAdminPanel, setShowAdminPanel] = React.useState(false);
+            const [selectedSubject, setSelectedSubject] = React.useState(null);
+
+            const isAdmin = user && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+            const createInitialData = () => [
+                { id: 'tpat1', name: 'TPAT1 (ความถนัดแพทย์)', weight: 30, color: 'bg-orange-500', icon: 'Brain', targetScore: 65 },
+                { id: 'math1', name: 'คณิตศาสตร์ 1', weight: 14, color: 'bg-blue-600', icon: 'Target', targetScore: 60 },
+                { id: 'phy', name: 'ฟิสิกส์', weight: 9.33, color: 'bg-indigo-500', icon: 'Book', targetScore: 55 },
+                { id: 'chem', name: 'เคมี', weight: 9.33, color: 'bg-teal-500', icon: 'Book', targetScore: 60 },
+                { id: 'bio', name: 'ชีววิทยา', weight: 9.33, color: 'bg-green-500', icon: 'Book', targetScore: 65 },
+                { id: 'eng', name: 'ภาษาอังกฤษ', weight: 14, color: 'bg-purple-600', icon: 'Book', targetScore: 70 },
+                { id: 'thai', name: 'ภาษาไทย', weight: 7, color: 'bg-pink-500', icon: 'Book', targetScore: 70 },
+                { id: 'soc', name: 'สังคมศึกษา', weight: 7, color: 'bg-yellow-500', icon: 'Book', targetScore: 60 }
+            ].map(s => ({ ...s, progress: 0, scoreHistory: [], topics: MASTER_CURRICULUM[s.id].map(t => ({ name: t, completed: false })) }));
+
+            // 1. ตรวจสอบสถานะล็อกอิน
+            React.useEffect(() => {
+                const unsubscribe = auth.onAuthStateChanged((currUser) => {
+                    if (currUser) {
+                        setUser(currUser);
+                        checkUserStatus(currUser);
+                    } else {
+                        setUser(null);
+                        setIsApproved(false);
+                        setAuthMode('login');
+                    }
+                });
+                return () => unsubscribe();
+            }, []);
+
+            // 2. เช็คการอนุมัติสิทธิ์
+            const checkUserStatus = (currUser) => {
+                if (currUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+                    setIsApproved(true);
+                    setAuthMode('dashboard');
+                    return;
+                }
+                // ตรวจจาก Firestore เส้นทางตรง
+                db.collection('artifacts').doc(appId).collection('public').doc('data').collection('user_approvals').doc(currUser.uid)
+                .onSnapshot((doc) => {
+                    if (doc.exists && doc.data().approved === true) {
+                        setIsApproved(true);
+                        setAuthMode('dashboard');
+                    } else {
+                        setIsApproved(false);
+                        setAuthMode('pending');
+                    }
+                });
+            };
+
+            // 3. โหลดข้อมูลแผนการเรียน & Logs เมื่อได้รับอนุมัติ
+            React.useEffect(() => {
+                if (!user || (!isApproved && !isAdmin)) return;
+
+                const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('dashboard_shared');
+                const unsubData = docRef.onSnapshot((doc) => {
+                    if (doc.exists) {
+                        setSubjects(doc.data().subjects || createInitialData());
+                    } else {
+                        const init = createInitialData();
+                        docRef.set({ subjects: init });
+                        setSubjects(init);
+                    }
+                });
+
+                const unsubLogs = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shared_logs')
+                    .onSnapshot((snap) => {
+                        const loadedLogs = [];
+                        snap.forEach(d => loadedLogs.push(d.data()));
+                        // เรียงลำดับเวลาในเครื่อง Client ป้องกันการซ่อนจาก Firestore Rule
+                        loadedLogs.sort((a,b) => new Date(b.time) - new Date(a.time));
+                        setLogs(loadedLogs.slice(0, 15));
+                    });
+
+                return () => { unsubData(); unsubLogs(); };
+            }, [user, isApproved]);
+
+            // 4. โหลดรายชื่อขอนุมัติสำหรับ Admin (ดึงแบบ Unfiltered Real-time)
+            React.useEffect(() => {
+                if (!isAdmin) return;
+                const unsubApprovals = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('user_approvals')
+                    .onSnapshot((snap) => {
+                        const list = [];
+                        snap.forEach(d => list.push({ uid: d.id, ...d.data() }));
+                        setApprovals(list);
+                    }, (err) => console.error("Admin load approvals error:", err));
+                return () => unsubApprovals();
+            }, [user]);
+
+            // 5. ระบบสมัครสมาชิกใหม่ (ปรับปรุงลอจิกเขียนฐานข้อมูลก่อนการเข้าล็อกอิน)
+            const handleRegister = async (e) => {
+                e.preventDefault();
+                setErrorMessage('');
+                const cleanEmail = email.trim().toLowerCase();
+                if(!cleanEmail || !password) return;
+
+                try {
+                    // ขั้นที่ 1: สร้างบัญชีผู้ใช้ในระบบ Auth
+                    const res = await auth.createUserWithEmailAndPassword(cleanEmail, password);
+                    const uid = res.user.uid;
+
+                    // ขั้นที่ 2: บันทึกใบคำร้องลง Firestore ทันที (มีสิทธิ์เป็น False รอแอดมิน)
+                    const isUserAdmin = cleanEmail === ADMIN_EMAIL.toLowerCase();
+                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('user_approvals').doc(uid).set({
+                        email: cleanEmail,
+                        approved: isUserAdmin,
+                        requestTime: new Date().toISOString()
+                    });
+
+                    // ขั้นที่ 3: บันทึก Log แรกเข้า
+                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shared_logs').add({
+                        user: cleanEmail,
+                        action: `ลงทะเบียนเข้าสู่ระบบใหม่ (${isUserAdmin ? 'Admin' : 'รอคุณพ่ออนุมัติ'})`,
+                        time: new Date().toISOString()
+                    });
+
+                    if (isUserAdmin) {
+                        setIsApproved(true);
+                        setAuthMode('dashboard');
+                    } else {
+                        setAuthMode('pending');
+                    }
+                } catch (err) {
+                    setErrorMessage(err.message);
+                }
+            };
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setErrorMessage('');
+                try {
+                    await auth.signInWithEmailAndPassword(email.trim().toLowerCase(), password);
+                } catch (err) {
+                    setErrorMessage(err.message);
+                }
+            };
+
+            const addLog = (action) => {
+                db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shared_logs').add({
+                    user: user.email,
+                    action,
+                    time: new Date().toISOString()
+                });
+            };
+
+            const saveSubjects = (newSubs) => {
+                db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('dashboard_shared').set({ subjects: newSubs });
+            };
+
+            // --- DATABASE ACTIONS ---
+            const handleUpdateTopic = (subId, topicIdx) => {
+                const updated = subjects.map(s => {
+                    if (s.id !== subId) return s;
+                    const nextTopics = s.topics.map((t, idx) => idx === topicIdx ? { ...t, completed: !t.completed } : t);
+                    const pct = Math.round((nextTopics.filter(t=>t.completed).length / nextTopics.length) * 100);
+                    addLog(`เปลี่ยนสถานะหัวข้อเรียนในวิชา ${s.name}`);
+                    return { ...s, topics: nextTopics, progress: pct };
+                });
+                setSubjects(updated); saveSubjects(updated);
+            };
+
+            const handleAddCustomTopic = (subId, name) => {
+                const updated = subjects.map(s => {
+                    if (s.id !== subId) return s;
+                    const nextTopics = [...s.topics, { name, completed: false }];
+                    addLog(`เพิ่มหัวข้อบทเรียนใหม่ "${name}" ในวิชา ${s.name}`);
+                    return { ...s, topics: nextTopics, progress: Math.round((nextTopics.filter(t=>t.completed).length / nextTopics.length) * 100) };
+                });
+                setSubjects(updated); saveSubjects(updated);
+            };
+
+            const handleDeleteCustomTopic = (subId, topicIdx) => {
+                const updated = subjects.map(s => {
+                    if (s.id !== subId) return s;
+                    const name = s.topics[topicIdx].name;
+                    const nextTopics = s.topics.filter((_, idx) => idx !== topicIdx);
+                    addLog(`ลบหัวข้อบทเรียน "${name}" ออกจากวิชา ${s.name}`);
+                    return { ...s, topics: nextTopics, progress: nextTopics.length ? Math.round((nextTopics.filter(t=>t.completed).length / nextTopics.length) * 100) : 0 };
+                });
+                setSubjects(updated); saveSubjects(updated);
+            };
+
+            const handleAddScore = (subId, score) => {
+                const updated = subjects.map(s => {
+                    if (s.id !== subId) return s;
+                    addLog(`บันทึกคะแนนสอบจำลองใหม่วิชา ${s.name} ได้ ${score} คะแนน`);
+                    return { ...s, scoreHistory: [...s.scoreHistory, { score, date: new Date().toISOString() }] };
+                });
+                setSubjects(updated); saveSubjects(updated);
+            };
+
+            const handleUpdateTarget = (subId, score) => {
+                const updated = subjects.map(s => (s.id === subId ? { ...s, targetScore: score === '' ? 0 : parseInt(score) } : s));
+                setSubjects(updated); saveSubjects(updated);
+            };
+
+            const handleApproveUser = (targetUid, targetEmail) => {
+                db.collection('artifacts').doc(appId).collection('public').doc('data').collection('user_approvals').doc(targetUid).update({ approved: true });
+                db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shared_logs').add({
+                    user: ADMIN_EMAIL,
+                    action: `🔓 อนุมัติสิทธิ์การเข้าใช้งานให้บัญชี: ${targetEmail}`,
+                    time: new Date().toISOString()
+                });
+            };
+
+            // --- RENDER SECTIONS ---
+            if (authMode === 'login' || authMode === 'register') {
+                return (
+                    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+                        <div className="bg-white p-8 rounded-2xl border w-full max-w-md shadow-xl text-center">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-2">Dek71 Mission Control</h2>
+                            <p className="text-sm text-gray-400 mb-6">ระบบล็อกอินแดชบอร์ดซิงค์คลาวด์ครอบครัว</p>
+                            <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4 text-left">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500">อีเมลผู้ใช้งาน</label>
+                                    <input type="email" required value={email} onChange={(e)=>setEmail(e.target.value)} className="w-full border rounded-lg p-2.5 mt-1 focus:ring-1 focus:ring-indigo-500" placeholder="example@gmail.com" />
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl font-bold text-gray-800">{subject.name}</h2>
-                                    <p className="text-sm text-gray-500 font-medium">สัดส่วนสถิติ: {subject.weight}% • ความคืบหน้าภาพรวม: {subject.progress}%</p>
+                                    <label className="text-xs font-bold text-gray-500">รหัสผ่าน (ขั้นต่ำ 6 ตัวอักษร)</label>
+                                    <input type="password" required value={password} onChange={(e)=>setPassword(e.target.value)} className="w-full border rounded-lg p-2.5 mt-1 focus:ring-1 focus:ring-indigo-500" placeholder="••••••" />
                                 </div>
+                                {errorMessage && <p className="text-xs text-red-500 font-bold bg-red-50 p-2 rounded">{errorMessage}</p>}
+                                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold p-2.5 rounded-lg transition-colors">
+                                    {authMode === 'login' ? 'เข้าสู่ระบบ' : 'สมัครใช้งานใหม่'}
+                                </button>
+                            </form>
+                            <div className="mt-6 pt-4 border-t text-sm">
+                                {authMode === 'login' ? (
+                                    <p className="text-gray-500">บัญชีใหม่? <span onClick={()=>setAuthMode('register')} className="text-indigo-600 font-bold cursor-pointer hover:underline">สมัครใช้งานที่นี่</span></p>
+                                ) : (
+                                    <p className="text-gray-500">มีบัญชีอยู่แล้ว? <span onClick={()=>setAuthMode('login')} className="text-indigo-600 font-bold cursor-pointer hover:underline">เข้าสู่ระบบที่นี่</span></p>
+                                )}
                             </div>
-                            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
-                                <Icons.Close />
-                            </button>
-                        </div>
-
-                        {/* Modal Content */}
-                        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
-                            <div className="mb-8 bg-gray-50 rounded-xl p-5 border border-gray-100">
-                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                    <Icons.Trophy /> แถบประเมินผลคะแนนสอบ (Mock Exam)
-                                </h3>
-
-                                <ScoreChart history={safeHistory} strokeColor={subject.color} targetScore={subject.targetScore} />
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label className="text-xs text-gray-500 mb-2 block font-bold">🎯 ตั้งเป้าหมายวิชานี้ (เต็ม 100)</label>
-                                        <div className="flex items-center gap-2">
-                                            <input 
-                                                type="number" 
-                                                value={subject.targetScore || ''} 
-                                                onChange={(e) => onUpdateTarget(subject.id, e.target.value)}
-                                                className="w-full font-bold text-indigo-600 bg-gray-50 border border-gray-200 rounded p-2 focus:ring-1 focus:ring-indigo-500"
-                                                placeholder="เช่น 65"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label className="text-xs text-gray-500 mb-2 block font-bold">📝 บันทึกผลสอบย่อย/จำลอง</label>
-                                        <div className="flex gap-2">
-                                            <input 
-                                                type="number" 
-                                                value={newScore}
-                                                onChange={(e) => setNewScore(e.target.value)}
-                                                className="w-full text-sm border border-gray-200 rounded p-2 focus:ring-1 focus:ring-green-500"
-                                                placeholder="คะแนน"
-                                            />
-                                            <button 
-                                                onClick={handleAddScore}
-                                                className="bg-gray-800 text-white text-xs px-4 rounded hover:bg-gray-900 flex items-center gap-1 shrink-0"
-                                            >
-                                                <Icons.Plus /> เพิ่มคะแนน
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* หัวข้อ Checklist */}
-                            <div className="mb-6">
-                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex justify-between items-center">
-                                    <span>เช็คลิสต์เนื้อหาทั้งหมด ({safeTopics.length} บทเรียน)</span>
-                                </h3>
-
-                                <form onSubmit={handleAddCustomTopicSubmit} className="flex gap-2 mb-4">
-                                    <input 
-                                        type="text" 
-                                        value={customTopicName}
-                                        onChange={(e) => setCustomTopicName(e.target.value)}
-                                        placeholder="➕ เพิ่มบทเรียนหรือแผนเตรียมตัวสำหรับน้องที่นี่..."
-                                        className="flex-1 text-sm border border-gray-200 rounded-lg p-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                    />
-                                    <button 
-                                        type="submit"
-                                        className="bg-indigo-600 text-white text-sm px-4 rounded-lg hover:bg-indigo-700 flex items-center gap-1 font-medium"
-                                    >
-                                        <Icons.Plus /> เพิ่มเนื้อหา
-                                    </button>
-                                </form>
-
-                                <div className="space-y-2">
-                                    {safeTopics.map((topic, index) => (
-                                        <div key={index} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-all group">
-                                            <label className="flex items-center cursor-pointer flex-1 mr-4">
-                                                <div className="relative flex items-center">
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={topic.completed} 
-                                                        onChange={() => onUpdateTopic(subject.id, index)}
-                                                        className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-gray-300 transition-all checked:border-green-500 checked:bg-green-500"
-                                                    />
-                                                    <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100">
-                                                        <Icons.Check />
-                                                    </div>
-                                                </div>
-                                                <span className={`ml-3 text-sm transition-colors ${topic.completed ? 'text-gray-400 line-through' : 'text-gray-700 font-medium'}`}>
-                                                    {topic.name}
-                                                </span>
-                                            </label>
-                                            
-                                            <button 
-                                                onClick={() => onDeleteCustomTopic(subject.id, index)}
-                                                className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                                                title="ลบหัวข้อบทเรียนนี้"
-                                            >
-                                                <Icons.Trash />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-4 border-t border-gray-100 bg-gray-50 text-right">
-                            <button onClick={onClose} className="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium text-sm">
-                                บันทึกและเสร็จสิ้น
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- ADMIN USER APPROVAL MODAL ---
-        const AdminPanelModal = ({ onClose }) => {
-            const [usersList, setUsersList] = React.useState([]);
-            const [loading, setLoading] = React.useState(true);
-            const [queryError, setQueryError] = React.useState('');
-
-            React.useEffect(() => {
-                if (!db) return;
-                
-                // ดึงข้อมูลแบบ Real-time พร้อมรับฟัง Error หากติดกฎความปลอดภัย
-                const unsubscribe = db.collection('user_approvals')
-                    .onSnapshot((snapshot) => {
-                        setQueryError('');
-                        const users = [];
-                        snapshot.forEach((doc) => {
-                            users.push({ id: doc.id, ...doc.data() });
-                        });
-                        
-                        // เรียงลำดับข้อมูลด้วยระบบ JavaScript
-                        users.sort((a, b) => {
-                            const dateA = a.registeredAt ? (a.registeredAt.seconds || new Date(a.registeredAt).getTime()) : 0;
-                            const dateB = b.registeredAt ? (b.registeredAt.seconds || new Date(b.registeredAt).getTime()) : 0;
-                            return dateB - dateA;
-                        });
-                        
-                        setUsersList(users);
-                        setLoading(false);
-                    }, (err) => {
-                        console.error("Fetch approval lists failed: ", err);
-                        setQueryError(err.message || 'Permission Denied: ไม่ได้รับสิทธิ์การดึงข้อมูลจากระบบคลาวด์');
-                        setLoading(false);
-                    });
-                return () => unsubscribe();
-            }, []);
-
-            const handleToggleApproval = async (userId, currentStatus) => {
-                try {
-                    await db.collection('user_approvals').doc(userId).update({
-                        approved: !currentStatus
-                    });
-                } catch (err) {
-                    alert("ไม่สามารถปรับปรุงสิทธิ์ได้: " + err.message);
-                }
-            };
-
-            const handleDeleteUserDoc = async (userId) => {
-                if (window.confirm("คุณพ่อแน่ใจหรือไม่ว่าต้องการลบข้อมูลสิทธิ์ของไอดีนี้?")) {
-                    try {
-                        await db.collection('user_approvals').doc(userId).delete();
-                    } catch (err) {
-                        alert("ลบไม่สำเร็จ: " + err.message);
-                    }
-                }
-            };
-
-            return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
-                    <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl z-10 flex flex-col slide-up overflow-hidden">
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                                <span className="text-indigo-600"><Icons.Shield /></span>
-                                <h2 className="text-xl font-bold text-gray-800">ระบบคัดกรองและอนุมัติบัญชีใช้งาน (Admin)</h2>
-                            </div>
-                            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                                <Icons.Close />
-                            </button>
-                        </div>
-
-                        <div className="p-6 max-h-[60vh] overflow-y-auto scrollbar-hide">
-                            {queryError && (
-                                <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded-r-xl">
-                                    <p className="font-bold">⚠️ ตรวจพบข้อผิดพลาดด้านสิทธิ์ความปลอดภัยคลาวด์:</p>
-                                    <p className="mt-1 font-mono">{queryError}</p>
-                                    <p className="mt-2 text-gray-500">แนะนำให้คุณพ่อปรับปรุงกฎ (Firestore Rules) ในหน้าเว็บจัดการ Firebase ตามคู่มือด้านล่างเพื่อให้ระบบยอมรับการดึงข้อมูลครับ</p>
-                                </div>
-                            )}
-
-                            {loading ? (
-                                <div className="text-center p-8 text-gray-500">กำลังโหลดรายชื่อ...</div>
-                            ) : usersList.length === 0 ? (
-                                <div className="text-center p-8 text-gray-400">ยังไม่มีผู้ใช้อื่นสมัครเข้ามาลงทะเบียนครับ</div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {usersList.map((user) => (
-                                        <div key={user.id} className="flex items-center justify-between p-4 bg-slate-50 border border-gray-100 rounded-xl">
-                                            <div className="mr-4 overflow-hidden">
-                                                <p className="text-sm font-semibold text-gray-800 truncate">{user.email}</p>
-                                                <p className="text-[10px] text-gray-400 font-mono mt-0.5">UID: {user.id}</p>
-                                                <p className="text-[11px] mt-1 flex items-center gap-1.5">
-                                                    สถานะปัจจุบัน: 
-                                                    {user.approved ? (
-                                                        <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">อนุมัติแล้ว</span>
-                                                    ) : (
-                                                        <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">รออนุมัติ</span>
-                                                    )}
-                                                </p>
-                                            </div>
-
-                                            <div className="flex items-center gap-2 shrink-0">
-                                                <button
-                                                    onClick={() => handleToggleApproval(user.id, user.approved)}
-                                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-colors ${
-                                                        user.approved 
-                                                            ? 'bg-amber-600 hover:bg-amber-700 text-white' 
-                                                            : 'bg-green-600 hover:bg-green-700 text-white'
-                                                    }`}
-                                                >
-                                                    {user.approved ? '🔒 ระงับสิทธิ์' : '🔓 เปิดสิทธิ์ใช้งาน'}
-                                                </button>
-                                                {user.email !== ADMIN_EMAIL && (
-                                                    <button
-                                                        onClick={() => handleDeleteUserDoc(user.id)}
-                                                        className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
-                                                        title="ลบรายชื่อ"
-                                                    >
-                                                        <Icons.Trash />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <div className="p-4 border-t border-gray-100 bg-gray-50 text-right text-xs text-gray-400">
-                            * เฉพาะผู้ใช้ที่ได้รับการ 'อนุมัติแล้ว' เท่านั้นจึงจะสามารถเขียน/อ่าน แผนการเรียนคลาวด์ได้
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- MAIN DASHBOARD APP ---
-        const Dek71Dashboard = () => {
-            const [subjects, setSubjects] = React.useState([]);
-            const [totalReadiness, setTotalReadiness] = React.useState(0);
-            const [averageScore, setAverageScore] = React.useState(0);
-            const [selectedSubject, setSelectedSubject] = React.useState(null);
-            const [status, setStatus] = React.useState('connecting'); 
-            const [currentUser, setCurrentUser] = React.useState(null);
-            const [isApproved, setIsApproved] = React.useState(false);
-            const [authLoading, setAuthLoading] = React.useState(true);
-
-            const [showAdminPanel, setShowAdminPanel] = React.useState(false);
-            
-            const [tpatDateStr, setTpatDateStr] = React.useState('2027-12-18'); 
-            const [alevelDateStr, setAlevelDateStr] = React.useState('2028-03-18');
-            const [isEditingTpat, setIsEditingTpat] = React.useState(false);
-            const [isEditingAlevel, setIsEditingAlevel] = React.useState(false);
-
-            const [tpatCountdown, setTpatCountdown] = React.useState({ days: 0 });
-            const [alevelCountdown, setAlevelCountdown] = React.useState({ days: 0 });
-            const [showResetConfirm, setShowResetConfirm] = React.useState(false);
-
-            const createInitialData = () => {
-                return [
-                    { id: 'tpat1', name: 'TPAT1 (ความถนัดแพทย์)', weight: 30, color: 'bg-orange-500', icon: 'Brain', targetScore: 65 },
-                    { id: 'math1', name: 'คณิตศาสตร์ 1', weight: 14, color: 'bg-blue-600', icon: 'Target', targetScore: 60 },
-                    { id: 'phy', name: 'ฟิสิกส์', weight: 9.33, color: 'bg-indigo-500', icon: 'Book', targetScore: 55 },
-                    { id: 'chem', name: 'เคมี', weight: 9.33, color: 'bg-teal-500', icon: 'Book', targetScore: 60 },
-                    { id: 'bio', name: 'ชีววิทยา', weight: 9.33, color: 'bg-green-500', icon: 'Book', targetScore: 65 },
-                    { id: 'eng', name: 'ภาษาอังกฤษ', weight: 14, color: 'bg-purple-600', icon: 'Book', targetScore: 70 },
-                    { id: 'thai', name: 'ภาษาไทย', weight: 7, color: 'bg-pink-500', icon: 'Book', targetScore: 70 },
-                    { id: 'soc', name: 'สังคมศึกษา', weight: 7, color: 'bg-yellow-500', icon: 'Book', targetScore: 60 },
-                ].map(sub => ({
-                    ...sub,
-                    progress: 0,
-                    lastUpdated: null,
-                    scoreHistory: [],
-                    topics: MASTER_CURRICULUM[sub.id] ? MASTER_CURRICULUM[sub.id].map(topic => ({ name: topic, completed: false })) : []
-                }));
-            };
-
-            const getStatusLabel = (statusStr) => {
-                if (statusStr === 'online') return 'คลาวด์ซิงค์ปลอดภัย (Online)';
-                if (statusStr.includes('offline')) return 'โหมดประมวลผลภายในเครื่อง (Offline Local)';
-                return 'กำลังตรวจสอบสถานะ...';
-            };
-
-            // 1. ตรวจจับสถานะ Auth
-            React.useEffect(() => {
-                if (!auth) {
-                    setStatus('offline');
-                    setAuthLoading(false);
-                    return;
-                }
-
-                const unsubscribeAuth = auth.onAuthStateChanged((user) => {
-                    setCurrentUser(user);
-                    if (!user) {
-                        setAuthLoading(false);
-                        setIsApproved(false);
-                    }
-                });
-
-                return () => unsubscribeAuth();
-            }, []);
-
-            // 2. ตรวจสอบสถานะการอนุมัติสิทธิ์ (Approval Monitor)
-            React.useEffect(() => {
-                if (authLoading || !currentUser || !db) return;
-
-                const userEmail = currentUser.email ? currentUser.email.toLowerCase() : '';
-
-                // กรณีล็อกอินด้วยบัญชีแอดมิน (คุณพ่อ) - ปลดล็อกอัตโนมัติ
-                if (userEmail === ADMIN_EMAIL) {
-                    setIsApproved(true);
-                    setAuthLoading(false);
-                    
-                    // บันทึก/อัปเดตสถานะแอดมินลงในตารางสิทธิ์
-                    db.collection('user_approvals').doc(currentUser.uid).set({
-                        email: userEmail,
-                        approved: true,
-                        registeredAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-                    return;
-                }
-
-                // กรณีผู้ใช้ทั่วไป - เช็คเอกสารอนุมัติสิทธิ์ (Real-time monitoring)
-                const approvalDocRef = db.collection('user_approvals').doc(currentUser.uid);
-                
-                const unsubscribe = approvalDocRef.onSnapshot((doc) => {
-                    if (doc.exists) {
-                        const data = doc.data();
-                        setIsApproved(data.approved === true);
-                    } else {
-                        // ไม่บันทึกซ้ำซ้อนในหน้านี้ ป้องกัน Race Condition ให้รอฟังอย่างเดียว
-                        setIsApproved(false);
-                    }
-                    setAuthLoading(false);
-                }, (err) => {
-                    console.error("Security approval verification failed:", err);
-                    setIsApproved(false);
-                    setAuthLoading(false);
-                });
-
-                return () => unsubscribe();
-            }, [currentUser, authLoading]);
-
-            // 3. กู้คืนและเซฟข้อมูลแบบแยกผู้ใช้ตาม ID
-            React.useEffect(() => {
-                if (authLoading || !currentUser || !isApproved) return;
-
-                setStatus('online');
-                
-                // ชี้ไปที่คลาวด์ของผู้ใช้แต่ละคนอย่างปลอดภัย
-                const docRef = db.collection('users').doc(currentUser.uid).collection('data').doc('dek71_v2');
-                
-                const unsubscribeSnapshot = docRef.onSnapshot((doc) => {
-                    if (doc.exists) {
-                        const data = doc.data();
-                        setSubjects(data.subjects || createInitialData());
-                        if(data.tpatDate) setTpatDateStr(data.tpatDate);
-                        if(data.alevelDate) setAlevelDateStr(data.alevelDate);
-                    } else {
-                        const initialData = createInitialData();
-                        docRef.set({ subjects: initialData, tpatDate: '2027-12-18', alevelDate: '2028-03-18' });
-                        setSubjects(initialData);
-                    }
-                }, (err) => {
-                    console.error("Data syncing error:", err);
-                    setStatus('offline (error)');
-                    const savedData = localStorage.getItem(`dek71_v2_${currentUser.uid}`);
-                    if (savedData) setSubjects(JSON.parse(savedData).subjects);
-                });
-
-                return () => unsubscribeSnapshot();
-            }, [currentUser, isApproved, authLoading]);
-
-            // ตัวคำนวณเวลานับถอยหลังแยก
-            React.useEffect(() => {
-                const timer = setInterval(() => {
-                    const calculateDays = (dateStr) => {
-                        const diff = new Date(dateStr + 'T00:00:00') - new Date();
-                        return diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
-                    };
-                    setTpatCountdown({ days: calculateDays(tpatDateStr) });
-                    setAlevelCountdown({ days: calculateDays(alevelDateStr) });
-                }, 1000);
-                return () => clearInterval(timer);
-            }, [tpatDateStr, alevelDateStr]);
-
-            const saveState = (updatedSubs, tpatD = tpatDateStr, alevelD = alevelDateStr) => {
-                if (!currentUser) return;
-                
-                // สำรองข้อมูลลงเบราว์เซอร์เครื่องนั้น ๆ
-                localStorage.setItem(`dek71_v2_${currentUser.uid}`, JSON.stringify({ subjects: updatedSubs, tpatDate: tpatD, alevelDate: alevelD }));
-                
-                // เขียนข้อมูลขึ้นสู่ Firestore
-                if (db && isApproved) {
-                    db.collection('users').doc(currentUser.uid).collection('data').doc('dek71_v2').set({ 
-                        subjects: updatedSubs, 
-                        tpatDate: tpatD, 
-                        alevelDate: alevelD 
-                    }).catch(e => console.error("Cloud saving aborted:", e));
-                }
-            };
-
-            // คำนวณความคืบหน้ารวม
-            React.useEffect(() => {
-                if (subjects.length > 0) {
-                    const weightedScore = subjects.reduce((acc, sub) => acc + (sub.progress * sub.weight / 100), 0);
-                    setTotalReadiness(weightedScore || 0);
-
-                    const subjectsWithScore = subjects.filter(s => s.scoreHistory && s.scoreHistory.length > 0);
-                    if (subjectsWithScore.length > 0) {
-                        const sumLatest = subjectsWithScore.reduce((acc, s) => acc + s.scoreHistory[s.scoreHistory.length-1].score, 0);
-                        setAverageScore(sumLatest / subjectsWithScore.length);
-                    } else {
-                        setAverageScore(0);
-                    }
-                }
-            }, [subjects]);
-
-            const updateSubjectState = (subjectId, updaterFn) => {
-                const newSubjects = subjects.map(sub => {
-                    if (sub.id !== subjectId) return sub;
-                    const updated = updaterFn(sub);
-                    updated.lastUpdated = new Date().toISOString();
-                    if (selectedSubject && selectedSubject.id === subjectId) setSelectedSubject(updated);
-                    return updated;
-                });
-                setSubjects(newSubjects);
-                saveState(newSubjects);
-            };
-
-            const handleUpdateTopic = (subjectId, topicIndex) => {
-                updateSubjectState(subjectId, (sub) => {
-                    const currentTopics = sub.topics || [];
-                    const newTopics = currentTopics.map((t, i) => i === topicIndex ? { ...t, completed: !t.completed } : t);
-                    const progress = newTopics.length > 0 ? Math.round((newTopics.filter(t => t.completed).length / newTopics.length) * 100) : 0;
-                    return { ...sub, topics: newTopics, progress };
-                });
-            };
-
-            const handleAddCustomTopic = (subjectId, topicName) => {
-                updateSubjectState(subjectId, (sub) => {
-                    const currentTopics = sub.topics || [];
-                    const newTopics = [...currentTopics, { name: topicName, completed: false }];
-                    const progress = newTopics.length > 0 ? Math.round((newTopics.filter(t => t.completed).length / newTopics.length) * 100) : 0;
-                    return { ...sub, topics: newTopics, progress };
-                });
-            };
-
-            const handleDeleteCustomTopic = (subjectId, topicIndex) => {
-                updateSubjectState(subjectId, (sub) => {
-                    const currentTopics = sub.topics || [];
-                    const newTopics = currentTopics.filter((_, i) => i !== topicIndex);
-                    const progress = newTopics.length > 0 ? Math.round((newTopics.filter(t => t.completed).length / newTopics.length) * 100) : 0;
-                    return { ...sub, topics: newTopics, progress };
-                });
-            };
-
-            const handleAddScore = (subjectId, score, date) => {
-                updateSubjectState(subjectId, (sub) => {
-                    const safeHistory = sub.scoreHistory || [];
-                    return { ...sub, scoreHistory: [...safeHistory, { score, date }] };
-                });
-            };
-
-            const handleDeleteScore = (subjectId, index) => {
-                updateSubjectState(subjectId, (sub) => {
-                    const safeHistory = [...(sub.scoreHistory || [])];
-                    safeHistory.splice(index, 1);
-                    return { ...sub, scoreHistory: safeHistory };
-                });
-            };
-
-            const handleUpdateTarget = (subjectId, val) => {
-                updateSubjectState(subjectId, (sub) => ({ ...sub, targetScore: val === '' ? 0 : parseInt(val) }));
-            };
-
-            const handleConfirmReset = () => {
-                const freshData = createInitialData();
-                setSubjects(freshData);
-                if (db && isApproved) {
-                    db.collection('users').doc(currentUser.uid).collection('data').doc('dek71_v2').set({ 
-                        subjects: freshData, 
-                        tpatDate: '2027-12-18', 
-                        alevelDate: '2028-03-18' 
-                    });
-                }
-                setTpatDateStr('2027-12-18');
-                setAlevelDateStr('2028-03-18');
-                setShowResetConfirm(false);
-            };
-
-            const handleSignOut = () => {
-                if (auth) {
-                    auth.signOut();
-                }
-            };
-
-            if (authLoading) {
-                return (
-                    <div className="flex items-center justify-center min-h-screen bg-slate-50">
-                        <div className="text-center animate-pulse">
-                            <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                            <p className="text-sm text-gray-500 font-semibold">กำลังยืนยันความปลอดภัยบนระบบคลาวด์...</p>
                         </div>
                     </div>
                 );
             }
 
-            if (!currentUser) {
-                return <LoginScreen />;
+            if (authMode === 'pending') {
+                return (
+                    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+                        <div className="bg-white p-8 rounded-2xl border w-full max-w-md shadow-xl text-center">
+                            <div className="w-16 h-16 bg-amber-100 text-amber-600 flex items-center justify-center rounded-full mx-auto mb-4 text-2xl font-bold">⏱️</div>
+                            <h2 className="text-xl font-bold text-gray-800">รอการเปิดสิทธิ์จากคุณพ่อ</h2>
+                            <p className="text-sm text-gray-500 mt-2">บัญชีของคุณ ({user.email}) อยู่ในระบบคลาวด์แล้ว กรุณาแจ้งให้คุณพ่อกดปุ่ม "เปิดสิทธิ์ใช้งาน" บนหน้าจอคอมพิวเตอร์ของคุณพ่อครับ</p>
+                            <button onClick={()=>auth.signOut()} className="mt-6 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-bold rounded-lg transition-colors">ออกจากระบบ</button>
+                        </div>
+                    </div>
+                );
             }
 
-            // แสดงหน้าจอรอรับการตรวจสอบสิทธิ์
-            if (!isApproved) {
-                return <WaitingApprovalScreen email={currentUser.email} onSignOut={handleSignOut} />;
-            }
-
-            const userEmail = currentUser.email ? currentUser.email.toLowerCase() : '';
-            const isAdmin = userEmail === ADMIN_EMAIL;
+            const totalReadiness = subjects.length ? subjects.reduce((acc, s) => acc + (s.progress * s.weight / 100), 0) : 0;
 
             return (
                 <div className="max-w-6xl mx-auto p-4 md:p-8 min-h-screen">
                     <header className="mb-8">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                             <div>
                                 <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
                                     <span className="bg-indigo-600 text-white p-2 rounded-lg"><Icons.Target /></span>
-                                    Dek71 Tracker
+                                    Dek71 Shared Tracker (ครอบครัวกอ-ระ-นพ)
                                 </h1>
-                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 ml-1">
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
-                                        <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">{getStatusLabel(status)}</p>
-                                    </div>
-                                    <span className="text-gray-300">|</span>
-                                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                                        <Icons.User />
-                                        <span className="font-semibold">{currentUser.email} {isAdmin && <span className="text-red-500 font-bold ml-1">(Admin คุณพ่อ)</span>}</span>
-                                    </div>
-                                    <button 
-                                        onClick={handleSignOut}
-                                        className="text-xs text-red-500 hover:text-red-600 font-bold flex items-center gap-1 ml-2 border border-red-200/50 hover:border-red-500/30 px-2 py-0.5 rounded-md hover:bg-red-50 transition-all"
-                                    >
-                                        <Icons.Logout /> ออกจากระบบ
-                                    </button>
-                                </div>
+                                <p className="text-xs font-bold text-gray-400 mt-1">ผู้ใช้งานปัจจุบัน: <span className="text-indigo-600">{user.email}</span> ({isAdmin ? 'Admin 最高権限' : 'สมาชิกในบ้าน'})</p>
                             </div>
-
-                            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                            <div className="flex gap-2">
                                 {isAdmin && (
-                                    <button 
-                                        onClick={() => setShowAdminPanel(true)}
-                                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all shrink-0"
-                                    >
-                                        <Icons.Shield /> 🛡️ จัดการสิทธิ์ผู้ใช้งาน
+                                    <button onClick={()=>setShowAdminPanel(!showAdminPanel)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors">
+                                        🛡️ จัดการสิทธิ์ผู้ใช้งาน ({approvals.filter(a=>!a.approved).length})
                                     </button>
                                 )}
-
-                                <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
-                                    <div className="p-2 bg-orange-100 rounded-lg text-orange-600"><Icons.Clock /></div>
-                                    <div>
-                                        <div className="text-[10px] text-gray-400 font-bold uppercase">สอบวิชาเฉพาะ TPAT1</div>
-                                        <div className="text-md font-bold text-orange-600">{tpatCountdown.days} วันที่เหลือ</div>
-                                        {isEditingTpat ? (
-                                            <input 
-                                                type="date" 
-                                                value={tpatDateStr} 
-                                                onChange={(e) => { setTpatDateStr(e.target.value); saveState(subjects, e.target.value, alevelDateStr); }} 
-                                                onBlur={()=>setIsEditingTpat(false)} 
-                                                className="text-[10px] border p-0.5 rounded" 
-                                                autoFocus 
-                                            />
-                                        ) : (
-                                            <span onClick={()=>setIsEditingTpat(true)} className="text-[10px] text-gray-400 flex items-center gap-1 cursor-pointer hover:text-indigo-500">วันสอบ: {tpatDateStr} <Icons.Edit /></span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
-                                    <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><Icons.Calendar /></div>
-                                    <div>
-                                        <div className="text-[10px] text-gray-400 font-bold uppercase">สอบวิชาสามัญ A-Level</div>
-                                        <div className="text-md font-bold text-blue-600">{alevelCountdown.days} วันที่เหลือ</div>
-                                        {isEditingAlevel ? (
-                                            <input 
-                                                type="date" 
-                                                value={alevelDateStr} 
-                                                onChange={(e) => { setAlevelDateStr(e.target.value); saveState(subjects, tpatDateStr, e.target.value); }} 
-                                                onBlur={()=>setIsEditingAlevel(false)} 
-                                                className="text-[10px] border p-0.5 rounded" 
-                                                autoFocus 
-                                            />
-                                        ) : (
-                                            <span onClick={()=>setIsEditingAlevel(true)} className="text-[10px] text-gray-400 flex items-center gap-1 cursor-pointer hover:text-indigo-500">วันสอบ: {alevelDateStr} <Icons.Edit /></span>
-                                        )}
-                                    </div>
-                                </div>
+                                <button onClick={()=>auth.signOut()} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 text-xs font-bold rounded-lg transition-colors">ออกจากระบบ</button>
                             </div>
                         </div>
 
-                        {/* แผงข้อมูลภาพรวม (Total Stats) */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
-                                <div className="relative z-10">
-                                    <div className="text-sm font-medium opacity-90 mb-1">ความพร้อมภาพรวมถ่วงน้ำหนัก (Weighted Readiness)</div>
-                                    <div className="text-4xl font-bold">{totalReadiness.toFixed(2)}%</div>
-                                    <div className="w-full bg-black/20 rounded-full h-1.5 mt-3 overflow-hidden">
-                                        <div className="bg-white h-full" style={{ width: `${totalReadiness}%` }}></div>
-                                    </div>
+                        {/* ADMIN PANEL OVERLAY */}
+                        {showAdminPanel && isAdmin && (
+                            <div className="bg-blue-50 border border-blue-200 p-5 rounded-xl mb-6 slide-up">
+                                <h3 className="font-bold text-blue-900 mb-3 text-sm flex items-center gap-2">🛡️ แผงควบคุมสิทธิ์ครอบครัว (แอดมินคุณพ่อ)</h3>
+                                <div className="space-y-2">
+                                    {approvals.map((app) => (
+                                        <div key={app.uid} className="bg-white p-3 rounded-lg border border-blue-100 flex justify-between items-center text-sm">
+                                            <div>
+                                                <span className="font-bold text-gray-700">{app.email}</span>
+                                                <span className="text-xs text-gray-400 ml-2">สมัครเมื่อ: {new Date(app.requestTime).toLocaleTimeString()}</span>
+                                            </div>
+                                            {app.approved ? (
+                                                <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded">🔓 เปิดใช้งานแล้ว</span>
+                                            ) : (
+                                                <button onClick={()=>handleApproveUser(app.uid, app.email)} className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 text-xs font-bold rounded transition-colors">🔓 คลิกเปิดสิทธิ์ใช้งาน</button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {approvals.length === 0 && <p className="text-xs text-blue-600 text-center py-4">ยังไม่มีประวัติรายชื่อผู้ลงทะเบียนเข้ามาในระบบครับ</p>}
                                 </div>
                             </div>
+                        )}
 
-                            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center justify-between">
-                                <div>
-                                    <div className="text-sm text-gray-500 font-medium flex items-center gap-2"><span className="text-orange-500"><Icons.Trophy /></span> สถิติเฉลี่ยจำลองล่าสุด (Mock Avg)</div>
-                                    <div className="text-4xl font-bold text-gray-800 mt-1">{averageScore.toFixed(1)} <span className="text-sm font-normal text-gray-400">/100</span></div>
+                        {/* DASHBOARD TOTAL STATS */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg">
+                                <div className="text-sm opacity-90 mb-1">ความพร้อมภาพรวมถ่วงน้ำหนักของน้อง</div>
+                                <div className="text-4xl font-bold">{totalReadiness.toFixed(2)}%</div>
+                                <div className="w-full bg-black/20 rounded-full h-1.5 mt-3 overflow-hidden">
+                                    <div className="bg-white h-full" style={{ width: `${totalReadiness}%` }}></div>
                                 </div>
-                                <button 
-                                    onClick={() => setShowResetConfirm(true)} 
-                                    className="bg-red-50 hover:bg-red-100 text-red-600 text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors font-semibold"
-                                >
-                                    <Icons.Refresh /> ล้างข้อมูลทั้งหมด
-                                </button>
+                            </div>
+                            <div className="bg-white rounded-2xl p-5 border shadow-sm flex flex-col justify-center">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">สถานะสัญญาณความปลอดภัย</span>
+                                <span className="text-md font-bold text-green-600 flex items-center gap-1.5">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div> ซิงค์ข้อมูลข้ามเครื่องเรียลไทม์ (Cloud Connected)
+                                </span>
                             </div>
                         </div>
                     </header>
 
-                    {/* รายวิชาสอบทั้งหมด */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* SUBJECT CARDS GRID */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                         {subjects.map((sub) => {
                             const latest = sub.scoreHistory && sub.scoreHistory.length > 0 ? sub.scoreHistory[sub.scoreHistory.length-1].score : 0;
                             return (
-                                <div 
-                                    key={sub.id} 
-                                    onClick={() => setSelectedSubject(sub)}
-                                    className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 cursor-pointer hover:shadow-md transition-all relative overflow-hidden group"
-                                >
+                                <div key={sub.id} onClick={() => { setSelectedSubject(sub); }} className="bg-white rounded-xl border p-5 cursor-pointer hover:shadow-md transition-all relative overflow-hidden group">
                                     <div className={`absolute bottom-0 left-0 h-1 ${sub.color}`} style={{ width: `${sub.progress}%` }}></div>
                                     <div className="flex justify-between items-start mb-2">
                                         <div className={`p-2 rounded-lg ${sub.color} bg-opacity-10 text-gray-700`}>
@@ -1034,17 +498,30 @@
                                         </div>
                                         <span className="text-xl font-bold text-gray-700">{sub.progress}%</span>
                                     </div>
-                                    <h3 className="font-bold text-gray-800 mb-1">{sub.name}</h3>
+                                    <h3 className="font-bold text-gray-800">{sub.name}</h3>
                                     <div className="flex justify-between items-center text-xs text-gray-500 mt-3 p-1.5 bg-gray-50 rounded">
                                         <span>เป้าหมาย: {sub.targetScore || '-'}</span>
-                                        <span className="font-bold text-indigo-600">ทำจริง: {latest || '-'}</span>
+                                        <span className="font-bold text-indigo-600">จำลองล่าสุด: {latest || '-'}</span>
                                     </div>
                                 </div>
                             );
                         })}
                     </div>
 
-                    {/* รายวิชา Modal */}
+                    {/* LIVE ACTIVITY LOG FEED */}
+                    <footer className="bg-white border rounded-xl p-5 shadow-sm">
+                        <h3 className="font-bold text-sm text-gray-500 mb-3 uppercase flex items-center gap-2">📝 ประวัติกิจกรรมครอบครัวเรียลไทม์ (Activity Logs)</h3>
+                        <div className="space-y-1.5 max-h-48 overflow-y-auto text-xs scrollbar-hide">
+                            {logs.map((log, index) => (
+                                <div key={index} className="p-2 bg-slate-50 rounded flex justify-between border-l-2 border-indigo-500">
+                                    <span className="text-gray-700 font-medium"><span className="text-indigo-600 font-bold">{log.user}</span>: {log.action}</span>
+                                    <span className="text-gray-400 font-bold shrink-0 ml-4">{new Date(log.time).toLocaleTimeString()}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </footer>
+
+                    {/* DETAILS MODAL */}
                     {selectedSubject && (
                         <SubjectModal 
                             subject={selectedSubject} 
@@ -1053,51 +530,15 @@
                             onAddCustomTopic={handleAddCustomTopic}
                             onDeleteCustomTopic={handleDeleteCustomTopic}
                             onAddScore={handleAddScore}
-                            onDeleteScore={handleDeleteScore}
                             onUpdateTarget={handleUpdateTarget}
                         />
-                    )}
-
-                    {/* Admin Panel Modal */}
-                    {showAdminPanel && isAdmin && (
-                        <AdminPanelModal onClose={() => setShowAdminPanel(false)} />
-                    )}
-
-                    {/* โมดอลยืนยันรีเซ็ต */}
-                    {showResetConfirm && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowResetConfirm(false)}></div>
-                            <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl z-10 text-center animate-slideUp">
-                                <div className="text-red-500 flex justify-center mb-4">
-                                    <div className="bg-red-100 p-3 rounded-full">
-                                        <Icons.Trash />
-                                    </div>
-                                </div>
-                                <h3 className="text-lg font-bold text-gray-800 mb-2">ยืนยันการเริ่มระบบใหม่?</h3>
-                                <p className="text-sm text-gray-500 mb-6">ความคืบหน้าสะสม สถิติคะแนนทั้งหมด และตารางเป้าหมายของน้องจะถูกเคลียร์ล้างทั้งหมดเป็นศูนย์และไม่สามารถย้อนคืนกลับมาได้</p>
-                                <div className="flex gap-3">
-                                    <button 
-                                        onClick={() => setShowResetConfirm(false)} 
-                                        className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg text-sm transition-colors"
-                                    >
-                                        ยกเลิก
-                                    </button>
-                                    <button 
-                                        onClick={handleConfirmReset} 
-                                        className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm transition-colors"
-                                    >
-                                        ยืนยันล้างระบบ
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
                     )}
                 </div>
             );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<Dek71Dashboard />);
+        root.render(<App />);
     </script>
 </body>
 </html>
