@@ -231,21 +231,29 @@
             const stats = calculateScores();
 
             React.useEffect(() => {
-                const setupAuth = async () => {
-                    try {
-                        await auth.signInAnonymously();
+                // 1. ตรวจสอบสถานะและแก้บัคการซิงค์ข้ามเครื่อง (Cross-Device Sync Fix)
+                const unsubscribe = auth.onAuthStateChanged((user) => {
+                    if (user) {
                         setIsAuthReady(true);
-                    } catch (e) {
-                        console.warn("Anonymous auth failed", e);
+                    } else {
+                        // พยายามเข้าสู่ระบบ หากล้มเหลวก็ยังคงบังคับเปิดสวิตช์ให้เชื่อมต่อฐานข้อมูล
+                        // (นี่คือจุดที่แก้ปัญหาคอมเครื่องอื่นไม่ยอมอัปเดตข้อมูลตาม)
+                        auth.signInAnonymously().then(() => {
+                            setIsAuthReady(true);
+                        }).catch((e) => {
+                            console.warn("Auth status issue, bypassing to force Cloud Sync:", e);
+                            setIsAuthReady(true); // <--- แก้บัคตรงนี้: บังคับให้โหลดและซิงค์ข้อมูลกับคลาวด์เสมอ
+                        });
                     }
-                };
-                setupAuth();
+                });
 
                 const savedSession = localStorage.getItem('med71_session');
                 if (savedSession) {
                     setCurrentSession(JSON.parse(savedSession));
                     setAuthMode('dashboard');
                 }
+                
+                return () => unsubscribe();
             }, []);
 
             React.useEffect(() => {
