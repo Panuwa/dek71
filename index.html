@@ -16,9 +16,7 @@
 
     <style>
         body { font-family: 'Noto Sans Thai', sans-serif; background-color: #f8fafc; }
-        .scrollbar-hide::-scrollbar { display: none; }
-        .slide-up { animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
@@ -45,20 +43,21 @@
             const [logs, setLogs] = React.useState([]);
             const [isLoading, setIsLoading] = React.useState(true);
 
-            // บังคับ Sync ข้อมูลทุกครั้งที่เปิดเครื่อง
+            // ระบบดึงข้อมูลแบบปลอดภัย (รอการล็อกอินให้เสร็จก่อน)
             React.useEffect(() => {
                 auth.signInAnonymously().then(() => {
-                    // ดึงข้อมูลตารางเรียน
-                    const dashboardRef = db.collection('artifacts').doc(appId).collection('public').doc('data');
-                    dashboardRef.onSnapshot((doc) => {
+                    const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data');
+                    
+                    // ดึงข้อมูลหลัก
+                    const unsubData = docRef.onSnapshot((doc) => {
                         if (doc.exists && doc.data().subjects) {
                             setSubjects(doc.data().subjects);
                         }
                         setIsLoading(false);
-                    });
+                    }, (err) => console.error("Snapshot Error:", err));
 
                     // ดึง Logs
-                    db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shared_logs')
+                    const unsubLogs = docRef.collection('shared_logs')
                         .orderBy('time', 'desc')
                         .limit(10)
                         .onSnapshot(snap => {
@@ -66,64 +65,76 @@
                             snap.forEach(d => l.push(d.data()));
                             setLogs(l);
                         });
+
+                    return () => { unsubData(); unsubLogs(); };
                 });
             }, []);
 
-            const updateCloudData = (newSubjects) => {
-                setSubjects(newSubjects);
-                db.collection('artifacts').doc(appId).collection('public').doc('data').set({ subjects: newSubjects }, { merge: true });
-                db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shared_logs').add({
-                    user: 'ผู้ใช้งาน',
-                    action: 'มีการอัปเดตข้อมูลตารางเรียน',
-                    time: new Date().toISOString()
-                });
+            const updateData = async (newSubjects) => {
+                try {
+                    await db.collection('artifacts').doc(appId).collection('public').doc('data').set(
+                        { subjects: newSubjects }, 
+                        { merge: true }
+                    );
+                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shared_logs').add({
+                        user: 'ผู้ใช้งาน',
+                        action: 'อัปเดตข้อมูลตารางเรียน',
+                        time: new Date().toISOString()
+                    });
+                } catch (e) {
+                    alert("บันทึกข้อมูลล้มเหลว (ตรวจสอบ Firebase Rules)");
+                }
             };
+
+            if (isLoading) return <div className="p-20 text-center font-bold text-gray-500">กำลังเชื่อมต่อฐานข้อมูล...</div>;
 
             const stats = {
                 raw: subjects.reduce((acc, s) => acc + (s.scoreHistory?.length > 0 ? s.scoreHistory[s.scoreHistory.length-1].score : 0), 0),
                 max: subjects.length * 100
             };
 
-            if (isLoading) return <div className="flex justify-center p-20 font-bold text-gray-500">กำลังเชื่อมต่อฐานข้อมูล...</div>;
-
             return (
                 <div className="max-w-4xl mx-auto p-4 space-y-6">
                     <h1 className="text-2xl font-bold">MED71 Monitor and Evaluation</h1>
                     
-                    {/* Dashboard กลาง */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-blue-600 text-white p-4 rounded-lg shadow">
-                            <p className="text-xs opacity-80">คะแนนรวมทั้งหมด</p>
-                            <p className="text-2xl font-bold">{stats.raw} / {stats.max}</p>
+                            <p className="text-xs opacity-80">คะแนนรวมล่าสุด</p>
+                            <p className="text-2xl font-bold">{stats.raw}</p>
                         </div>
                         <div className="bg-green-600 text-white p-4 rounded-lg shadow">
-                            <p className="text-xs opacity-80">สถานะการเชื่อมต่อ</p>
-                            <p className="text-lg font-bold">ซิงค์ข้อมูลเรียลไทม์</p>
+                            <p className="text-xs opacity-80">สถานะ</p>
+                            <p className="text-lg font-bold">ออนไลน์ (เรียลไทม์)</p>
                         </div>
                     </div>
 
-                    {/* รายวิชา */}
                     <div className="grid grid-cols-1 gap-2">
-                        {subjects.map(sub => (
-                            <div key={sub.id} className="bg-white p-3 border rounded shadow-sm flex justify-between items-center">
+                        {subjects.map((sub, idx) => (
+                            <div key={idx} className="bg-white p-3 border rounded shadow-sm flex justify-between items-center">
                                 <span className="font-bold">{sub.name}</span>
                                 <div className="w-1/2 bg-gray-200 h-2 rounded-full overflow-hidden">
-                                    <div className={`${sub.color} h-full`} style={{width: `${sub.progress || 0}%`}}></div>
+                                    <div className={`${sub.color || 'bg-blue-500'} h-full`} style={{width: `${sub.progress || 0}%`}}></div>
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    {/* Logs */}
                     <div className="text-xs text-gray-400 bg-white p-4 rounded shadow border">
-                        <h4 className="font-bold mb-2">ประวัติกิจกรรม:</h4>
+                        <h4 className="font-bold mb-2 uppercase">ประวัติการทำงาน:</h4>
                         {logs.map((log, i) => <div key={i}>{log.action} ({new Date(log.time).toLocaleTimeString()})</div>)}
                     </div>
                 </div>
             );
         };
         
-        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
+```
+
+### สรุปการแก้ไข:
+1.  **Firebase Rules:** ผมแนะนำให้คุณพ่อไปเปิดสิทธิ์ในคอนโซล (สำคัญมาก)
+2.  **Auth First:** โค้ดถูกสั่งให้ทำ `signInAnonymously()` ก่อนจะพยายามดึงข้อมูล เพื่อให้สิทธิ์ใน Firestore ทำงานได้โดยไม่ติด error `permission-denied`
+3.  **Real-time Stability:** ใช้ `onSnapshot` เพื่อซิงค์ข้อมูลระหว่างเครื่องทันทีแบบเรียลไทม์ครับ
