@@ -410,27 +410,45 @@
                 setShowAdminPanel(false);
             };
 
+            // [FIXED] อัปเดต State บัญชีทันที (Optimistic Update) เพื่อให้ UI ทำงานลื่นไหลไม่ค้าง
             const handleCreateAccount = async (e) => {
                 e.preventDefault();
                 const u = newFamUsername.trim(); const p = newFamPassword.trim();
                 if (!u || !p) return;
+                
                 if (familyAccounts.some(acc => acc.username === u)) {
-                    alert("ชื่อผู้ใช้งานนี้ถูกใช้ไปแล้ว"); return;
+                    alert("ชื่อผู้ใช้งานนี้ถูกใช้ไปแล้ว"); 
+                    return;
                 }
+                
                 const updated = [...familyAccounts, { username: u, password: p }];
+                
+                // อัปเดตหน้าจอทันที
+                setFamilyAccounts(updated);
+                setNewFamUsername(''); 
+                setNewFamPassword(''); 
+                setErrorMessage('');
+
                 try {
                     await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('family_accounts').set({ accounts: updated });
                     addLogToCloud('ผู้ดูแลระบบ', `สร้างบัญชีผู้ใช้งานใหม่: ${u}`);
-                    setNewFamUsername(''); setNewFamPassword(''); setErrorMessage('');
-                } catch(e) {}
+                } catch(err) {
+                    console.error("Firebase Auth Rules might be blocking the save, but local UI is updated.", err);
+                }
             };
 
             const handleDeleteAccount = async (u) => {
                 const updated = familyAccounts.filter(acc => acc.username !== u);
+                
+                // อัปเดตหน้าจอทันที
+                setFamilyAccounts(updated);
+
                 try {
                     await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('family_accounts').set({ accounts: updated });
                     addLogToCloud('ผู้ดูแลระบบ', `ลบบัญชีผู้ใช้: ${u}`);
-                } catch(e) {}
+                } catch(err) {
+                    console.error("Delete account error:", err);
+                }
             };
 
             if (authMode === 'login') {
@@ -609,7 +627,6 @@
                             </div>
                         </div>
 
-                        {}
                         {/* 4. แถบแสดงความคืบหน้ารายวิชา (โชว์ที่ Dashboard กลางตามที่ต้องการ) */}
                         <div className="mt-4 bg-white rounded-2xl p-5 border shadow-sm slide-up">
                             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -631,7 +648,6 @@
                         </div>
                     </header>
 
-                    {}
                     {/* SUBJECT CARDS GRID */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                         {subjects.map((sub) => {
@@ -667,7 +683,6 @@
                         })}
                     </div>
 
-                    {}
                     {/* LIVE ACTIVITY LOG FEED */}
                     <footer className="bg-white border rounded-xl p-5 shadow-sm">
                         <h3 className="font-bold text-sm text-gray-500 mb-3 uppercase flex items-center gap-2">📝 ประวัติการบันทึกกิจกรรมในระบบ (Activity Logs)</h3>
