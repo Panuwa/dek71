@@ -158,7 +158,7 @@
         const App = () => {
             const [authMode, setAuthMode] = React.useState('login'); 
             const [currentSession, setCurrentSession] = React.useState(null); 
-            const [isAuthReady, setIsAuthReady] = React.useState(false); // ป้องกัน Permission Error
+            const [isAuthReady, setIsAuthReady] = React.useState(false); 
             
             // Login Inputs
             const [usernameInput, setUsernameInput] = React.useState('');
@@ -197,7 +197,7 @@
             const [newFamUsername, setNewFamUsername] = React.useState('');
             const [newFamPassword, setNewFamPassword] = React.useState('');
 
-            // คำนวณคะแนนรวมตาม Weight แบบ กสพท. และคำนวณคะแนนดิบรวม
+            // คำนวณคะแนนรวมตาม Weight แบบ กสพท. และคำนวณคะแนนดิบรวม 800
             const calculateScores = () => {
                 let totalWeighted = 0;
                 let totalWeightedTarget = 0;
@@ -231,7 +231,6 @@
             const stats = calculateScores();
 
             React.useEffect(() => {
-                // ต้องรอให้การยืนยันตัวตน (Auth) เสร็จสมบูรณ์ก่อน เพื่อป้องกัน Permission Denied Error
                 const setupAuth = async () => {
                     try {
                         await auth.signInAnonymously();
@@ -250,7 +249,6 @@
             }, []);
 
             React.useEffect(() => {
-                // จะทำงานก็ต่อเมื่อเข้าสู่ระบบเรียบร้อยและ Auth พร้อมแล้ว
                 if (authMode !== 'dashboard' || !isAuthReady) return;
 
                 const dashboardRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('dashboard_shared');
@@ -261,7 +259,6 @@
                         if (loaded.length === 0) {
                             setSubjects(createInitialData());
                         } else {
-                            // ระบบ Auto-heal ป้องกันหัวข้อว่างเปล่า
                             const healed = loaded.map(loadedSub => {
                                 const defaultSub = createInitialData().find(s => s.id === loadedSub.id);
                                 if (!loadedSub.topics || loadedSub.topics.length === 0) {
@@ -502,7 +499,7 @@
             }
 
             const isAdminLoggedIn = currentSession && currentSession.role === 'admin';
-            const totalReadiness = subjects.length ? subjects.reduce((acc, s) => acc + (s.progress * s.weight / 100), 0) : 0;
+            const totalReadiness = subjects.length ? subjects.reduce((acc, s) => acc + (s.progress * (100 / subjects.length) / 100), 0) : 0;
 
             return (
                 <div className="max-w-6xl mx-auto p-4 md:p-8 min-h-screen">
@@ -594,7 +591,7 @@
                             {/* 3. กล่องความคืบหน้าเนื้อหาและความปลอดภัย */}
                             <div className="bg-white rounded-2xl p-5 border shadow-sm flex flex-col justify-between">
                                 <div>
-                                    <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">ความพร้อมเนื้อหาบทเรียน</div>
+                                    <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">ความพร้อมเนื้อหาบทเรียนเฉลี่ยรวม</div>
                                     <div className="text-2xl font-bold text-gray-700">{totalReadiness.toFixed(2)}%</div>
                                 </div>
                                 <div className="mt-4 pt-3 border-t border-gray-100">
@@ -611,8 +608,30 @@
                                 </div>
                             </div>
                         </div>
+
+                        {}
+                        {/* 4. แถบแสดงความคืบหน้ารายวิชา (โชว์ที่ Dashboard กลางตามที่ต้องการ) */}
+                        <div className="mt-4 bg-white rounded-2xl p-5 border shadow-sm slide-up">
+                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                <Icons.Book /> ความคืบหน้าในการเรียนแต่ละวิชา
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
+                                {subjects.map((sub) => (
+                                    <div key={`prog-${sub.id}`} className="flex flex-col">
+                                        <div className="flex justify-between items-end mb-1">
+                                            <span className="text-xs font-bold text-gray-700 truncate pr-2">{sub.name}</span>
+                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md text-white ${sub.color}`}>{sub.progress}%</span>
+                                        </div>
+                                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden shadow-inner">
+                                            <div className={`h-full ${sub.color} transition-all duration-500`} style={{ width: `${sub.progress}%` }}></div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </header>
 
+                    {}
                     {/* SUBJECT CARDS GRID */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                         {subjects.map((sub) => {
@@ -648,6 +667,7 @@
                         })}
                     </div>
 
+                    {}
                     {/* LIVE ACTIVITY LOG FEED */}
                     <footer className="bg-white border rounded-xl p-5 shadow-sm">
                         <h3 className="font-bold text-sm text-gray-500 mb-3 uppercase flex items-center gap-2">📝 ประวัติการบันทึกกิจกรรมในระบบ (Activity Logs)</h3>
