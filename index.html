@@ -1,44 +1,41 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MED71 — Study Dashboard</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MED71 Monitor and Evaluation</title>
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: 'Noto Sans Thai', 'Inter', sans-serif; background: #0f0f1a; color: #e2e8f0; margin: 0; }
-    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
-    .glass-dark { background: rgba(15,15,26,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
-    .gradient-text { background: linear-gradient(135deg,#f472b6,#a78bfa,#60a5fa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-    .card-hover { transition: transform .2s, box-shadow .2s; cursor: pointer; }
-    .card-hover:hover { transform: translateY(-3px); box-shadow: 0 20px 40px rgba(0,0,0,.4); }
-    .slide-up { animation: slideUp .3s ease-out; }
-    @keyframes slideUp { from { transform:translateY(16px); opacity:0; } to { transform:translateY(0); opacity:1; } }
-    .pulse-ring { animation: pulseRing 2s infinite; }
-    @keyframes pulseRing { 0%,100% { box-shadow: 0 0 0 0 rgba(251,191,36,.4); } 50% { box-shadow: 0 0 0 8px rgba(251,191,36,0); } }
-    .toast { animation: fadeDown .3s ease-out; position:fixed; top:16px; right:16px; z-index:9999; }
-    @keyframes fadeDown { from { transform:translateY(-16px); opacity:0; } to { transform:translateY(0); opacity:1; } }
-    .progress-ring-circle { transition: stroke-dashoffset .6s ease; transform: rotate(-90deg); transform-origin: 50% 50%; }
-    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
-    .day-btn { transition: all .15s; }
-    .day-btn:hover { transform: scale(1.05); }
-    .badge-glow { box-shadow: 0 0 16px rgba(251,191,36,.5); }
+    body { background: #0f0f1a; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #1e1e2e; }
+    ::-webkit-scrollbar-thumb { background: #4a4a6a; border-radius: 3px; }
+    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); }
+    .card-hover { transition: transform 0.2s, box-shadow 0.2s; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,0,0,0.5) !important; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.3s ease; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+    .pulse { animation: pulse 2s infinite; }
+    @keyframes slideIn { from{transform:translateX(110%);} to{transform:translateX(0);} }
+    .toast-anim { animation: slideIn 0.3s ease; }
+    textarea:focus, input:focus { outline: none; border-color: rgba(99,102,241,0.6) !important; }
+    button:active { transform: scale(0.97); }
   </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
 
+// ── Firebase ─────────────────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyDXQ9TIM1NbyR-PJNbVO74Cf_1w3hDWuGM",
   authDomain: "dek71-8af86.firebaseapp.com",
@@ -50,643 +47,620 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
-const appId = 'med71-monitor-evaluation';
-const ADMIN_EMAIL = "admin@med71.com";
-const ADMIN_PASS  = "Del@pis@11781";
+const DOC_PATH = 'artifacts/med71-monitor-evaluation/public/data/dek71_data/dashboard_shared';
 
-const DAYS = ['จ','อ','พ','พฤ','ศ','ส','อา'];
-const DAY_KEYS = ['mon','tue','wed','thu','fri','sat','sun'];
-
+// ── Curriculum ───────────────────────────────────────────────────────────────
 const MASTER_CURRICULUM = {
-  tpat1: ["เชาวน์ปัญญา (อนุกรม/มิติสัมพันธ์)","จริยธรรมทางการแพทย์","ความเชื่อมโยง (GAT เชื่อมโยง)"],
-  math1: ["เซต & ตรรกศาสตร์","จำนวนจริง","ฟังก์ชัน","เรขาคณิตวิเคราะห์ & ภาคตัดกรวย","ฟังก์ชันเอกซ์โพ & ลอการิทึม","ฟังก์ชันตรีโกณมิติ","เมทริกซ์","เวกเตอร์","จำนวนเชิงซ้อน","หลักการนับ & ความน่าจะเป็น","ลำดับและอนุกรม","แคลคูลัสเบื้องต้น","สถิติและการแจกแจงความน่าจะเป็น"],
-  phy:   ["ธรรมชาติและพัฒนาการทางฟิสิกส์","การเคลื่อนที่แนวตรง","แรงและกฎการเคลื่อนที่","สมดุลกล","งานและพลังงาน","โมเมนตัมและการชน","การเคลื่อนที่แนวโค้ง","การเคลื่อนที่แบบฮาร์มอนิกฯ","คลื่น","แสงเชิงคลื่น","แสงเชิงรังสี","เสียง","ไฟฟ้าสถิต","ไฟฟ้ากระแส","แม่เหล็กและไฟฟ้า","ความร้อนและแก๊ส","ของแข็งและของไหล","ฟิสิกส์อะตอม","ฟิสิกส์นิวเคลียร์"],
-  chem:  ["ความปลอดภัยและทักษะฯ","อะตอมและสมบัติของธาตุ","พันธะเคมี","โมลและสูตรเคมี","สารละลาย","ปริมาณสารสัมพันธ์","แก๊สและสมบัติของแก๊ส","อัตราการเกิดปฏิกิริยาเคมี","สมดุลเคมี","กรด-เบส","เคมีไฟฟ้า","เคมีอินทรีย์","พอลิเมอร์","เคมีกับการแก้ปัญหา"],
-  bio:   ["ธรรมชาติของสิ่งมีชีวิต","เคมีที่เป็นพื้นฐานของสิ่งมีชีวิต","เซลล์และการทำงานของเซลล์","ระบบย่อยอาหาร","ระบบหายใจ","ระบบหมุนเวียนเลือด","ระบบภูมิคุ้มกัน","ระบบขับถ่าย","ระบบประสาทและอวัยวะรับความรู้สึก","ระบบต่อมไร้ท่อ","การเคลื่อนที่ของสิ่งมีชีวิต","การสืบพันธุ์และการเจริญเติบโต","พืช: โครงสร้างและหน้าที่","พืช: การสังเคราะห์ด้วยแสง","พืช: การสืบพันธุ์","พันธุศาสตร์และวิวัฒนาการ","ระบบนิเวศ"],
-  eng:   ["Vocabulary (3000 คำ)","Reading: Advertisements/News","Reading: Articles/Research","Conversation: Daily life","Conversation: Situational","Grammar & Structure","Writing: Paragraph Organization"],
-  thai:  ["หลักการใช้ภาษาไทย","การอ่านจับใจความ","การเขียนเพื่อการสื่อสาร","วรรณคดีวิจารณ์"],
-  soc:   ["ศาสนา ศีลธรรม จริยธรรม","หน้าที่พลเมือง","เศรษฐศาสตร์","ประวัติศาสตร์","ภูมิศาสตร์"]
+  tpat1: ["เชาวน์ปัญญา (อนุกรม/มิติสัมพันธ์)", "จริยธรรมทางการแพทย์", "ความเชื่อมโยง (GAT เชื่อมโยง)"],
+  math1: ["เซต & ตรรกศาสตร์", "จำนวนจริง", "ฟังก์ชัน", "เรขาคณิตวิเคราะห์ & ภาคตัดกรวย", "ฟังก์ชันเอกซ์โพ & ลอการิทึม", "ฟังก์ชันตรีโกณมิติ", "เมทริกซ์", "เวกเตอร์", "จำนวนเชิงซ้อน", "หลักการนับ & ความน่าจะเป็น", "ลำดับและอนุกรม", "แคลคูลัสเบื้องต้น", "สถิติและการแจกแจงความน่าจะเป็น"],
+  phy:   ["ธรรมชาติและพัฒนาการทางฟิสิกส์", "การเคลื่อนที่แนวตรง", "แรงและกฎการเคลื่อนที่", "สมดุลกล", "งานและพลังงาน", "โมเมนตัมและการชน", "การเคลื่อนที่แนวโค้ง", "การเคลื่อนที่แบบฮาร์มอนิกฯ", "คลื่น", "แสงเชิงคลื่น", "แสงเชิงรังสี", "เสียง", "ไฟฟ้าสถิต", "ไฟฟ้ากระแส", "แม่เหล็กและไฟฟ้า", "ความร้อนและแก๊ส", "ของแข็งและของไหล", "ฟิสิกส์อะตอม", "ฟิสิกส์นิวเคลียร์"],
+  chem:  ["ความปลอดภัยและทักษะฯ", "อะตอมและสมบัติของธาตุ", "พันธะเคมี", "โมลและสูตรเคมี", "สารละลาย", "ปริมาณสารสัมพันธ์", "แก๊สและสมบัติของแก๊ส", "อัตราการเกิดปฏิกิริยาเคมี", "สมดุลเคมี", "กรด-เบส", "เคมีไฟฟ้า", "เคมีอินทรีย์", "พอลิเมอร์", "เคมีกับการแก้ปัญหา"],
+  bio:   ["ธรรมชาติของสิ่งมีชีวิต", "เคมีที่เป็นพื้นฐานของสิ่งมีชีวิต", "เซลล์และการทำงานของเซลล์", "ระบบย่อยอาหาร", "ระบบหายใจ", "ระบบหมุนเวียนเลือด", "ระบบภูมิคุ้มกัน", "ระบบขับถ่าย", "ระบบประสาทและอวัยวะรับความรู้สึก", "ระบบต่อมไร้ท่อ", "การเคลื่อนที่ของสิ่งมีชีวิต", "การสืบพันธุ์และการเจริญเติบโต", "พืช: โครงสร้างและหน้าที่", "พืช: การสังเคราะห์ด้วยแสง", "พืช: การสืบพันธุ์", "พันธุศาสตร์และวิวัฒนาการ", "ระบบนิเวศ"],
+  eng:   ["Vocabulary (3000 คำ)", "Reading: Advertisements/News", "Reading: Articles/Research", "Conversation: Daily life", "Conversation: Situational", "Grammar & Structure", "Writing: Paragraph Organization"],
+  thai:  ["หลักการใช้ภาษาไทย", "การอ่านจับใจความ", "การเขียนเพื่อการสื่อสาร", "วรรณคดีวิจารณ์"],
+  soc:   ["ศาสนา ศีลธรรม จริยธรรม", "หน้าที่พลเมือง", "เศรษฐศาสตร์", "ประวัติศาสตร์", "ภูมิศาสตร์"],
 };
 
 const SUB_COLORS = {
-  tpat1: { from:'#f97316', to:'#ef4444', text:'#fed7aa' },
-  math1: { from:'#3b82f6', to:'#6366f1', text:'#bfdbfe' },
-  phy:   { from:'#8b5cf6', to:'#a855f7', text:'#e9d5ff' },
-  chem:  { from:'#14b8a6', to:'#06b6d4', text:'#ccfbf1' },
-  bio:   { from:'#22c55e', to:'#10b981', text:'#bbf7d0' },
-  eng:   { from:'#ec4899', to:'#f43f5e', text:'#fce7f3' },
-  thai:  { from:'#f59e0b', to:'#eab308', text:'#fef3c7' },
-  soc:   { from:'#64748b', to:'#475569', text:'#e2e8f0' },
+  tpat1: { from: '#f97316', to: '#ef4444', text: '#fed7aa', label: 'TPAT1 ความถนัดแพทย์' },
+  math1: { from: '#3b82f6', to: '#6366f1', text: '#bfdbfe', label: 'คณิตศาสตร์' },
+  phy:   { from: '#8b5cf6', to: '#7c3aed', text: '#ddd6fe', label: 'ฟิสิกส์' },
+  chem:  { from: '#f59e0b', to: '#d97706', text: '#fde68a', label: 'เคมี' },
+  bio:   { from: '#10b981', to: '#059669', text: '#a7f3d0', label: 'ชีววิทยา' },
+  eng:   { from: '#06b6d4', to: '#0891b2', text: '#a5f3fc', label: 'ภาษาอังกฤษ' },
+  thai:  { from: '#ec4899', to: '#db2777', text: '#fbcfe8', label: 'ภาษาไทย' },
+  soc:   { from: '#84cc16', to: '#65a30d', text: '#d9f99d', label: 'สังคมศึกษา' },
 };
 
 const BADGES = [
-  { id:'first_study',  emoji:'🌱', label:'เริ่มต้นแล้ว',   desc:'เปิด app ครั้งแรก',        cond: s => true },
-  { id:'streak3',      emoji:'🔥', label:'3 วันติด',       desc:'อ่านหนังสือ 3 วันติดกัน',  cond: (s,streak) => streak >= 3 },
-  { id:'streak7',      emoji:'⚡', label:'สัปดาห์ไฟ',     desc:'อ่านหนังสือ 7 วันติดกัน',  cond: (s,streak) => streak >= 7 },
-  { id:'score60',      emoji:'🎯', label:'60+ คะแนน',     desc:'mock test รวม ≥ 60',        cond: (s,streak,ws) => parseFloat(ws) >= 60 },
-  { id:'half_topics',  emoji:'📚', label:'ครึ่งทาง',       desc:'เรียนเนื้อหาครบ 50%',       cond: (s,streak,ws,avg) => avg >= 50 },
-  { id:'all_subjects', emoji:'🏆', label:'ครบทุกวิชา',    desc:'มีคะแนน mock ทุกวิชา',      cond: s => s.every(sub => sub.scoreHistory && sub.scoreHistory.length > 0) },
+  { id: 'streak3',  icon: '🔥', label: 'นักอ่าน 3 วัน',  desc: 'อ่านติดต่อกัน 3 วัน',         check: (s)      => s >= 3 },
+  { id: 'streak7',  icon: '⚡', label: 'สัปดาห์ทอง',      desc: 'อ่านติดต่อกัน 7 วัน',         check: (s)      => s >= 7 },
+  { id: 'streak30', icon: '👑', label: 'ราชาเดือน',        desc: 'อ่านติดต่อกัน 30 วัน',        check: (s)      => s >= 30 },
+  { id: 'score60',  icon: '🎯', label: 'ผ่านครั้งแรก',    desc: 'คะแนน mock ≥ 60%',           check: (_,logs) => logs.some(l => l.score >= 60) },
+  { id: 'score80',  icon: '🏆', label: 'นักเรียนดีเด่น',  desc: 'คะแนน mock ≥ 80%',           check: (_,logs) => logs.some(l => l.score >= 80) },
+  { id: 'all50',    icon: '📚', label: 'ครอบคลุม',         desc: 'ทุกวิชาอ่านแล้ว ≥ 50%',     check: (_,_2,ss)=> ss.every(s => getReadPct(s) >= 50) },
 ];
 
-// ---- Reusable UI ----
-const ProgressRing = ({ pct, size=56, stroke=5, color='#a78bfa' }) => {
-  const r = (size - stroke*2) / 2;
+const DEFAULT_TCAS = [
+  { id:'portfolio_apply',   period:'ก.ย. 69',          event:'สมัครรอบ Portfolio',                             date:'2026-09-01', color:'#ef4444' },
+  { id:'tpat1_apply',       period:'ต.ค. 69',          event:'สมัครสอบ TPAT1',                                date:'2026-10-01', color:'#f97316' },
+  { id:'tcas_register',     period:'ต.ค. 69',          event:'ลงทะเบียนเข้าสู่ระบบ TCAS',                    date:'2026-10-15', color:'#f97316' },
+  { id:'tgat_apply',        period:'ต.ค. - พ.ย. 69',  event:'สมัครสอบ TGAT/TPAT2-5',                        date:'2026-10-20', color:'#f59e0b' },
+  { id:'tgat_exam',         period:'ธ.ค. 69',          event:'สอบ TGAT/TPAT2-5',                             date:'2026-12-01', color:'#b45309' },
+  { id:'tgat_result_pc',    period:'ธ.ค. 69',          event:'ประกาศผลสอบ TGAT/TPAT2-5 (แบบคอมพิวเตอร์)',   date:'2026-12-20', color:'#b45309' },
+  { id:'tgat_result_paper', period:'ม.ค. 70',          event:'ประกาศผลสอบ TGAT/TPAT2-5 (แบบกระดาษ)',         date:'2027-01-15', color:'#2563eb' },
+  { id:'alevel_apply',      period:'ม.ค. - ก.พ. 70',  event:'สมัครสอบ A-Level',                              date:'2027-01-20', color:'#2563eb' },
+  { id:'quota_apply',       period:'ก.พ. 70',          event:'สมัครสอบ Quota',                                date:'2027-02-01', color:'#3b82f6' },
+  { id:'tpat1_exam',        period:'ก.พ. 70',          event:'สอบ TPAT1',                                     date:'2027-02-15', color:'#3b82f6' },
+  { id:'portfolio_result',  period:'ก.พ. 70',          event:'ประกาศผลรอบ Portfolio',                          date:'2027-02-28', color:'#3b82f6' },
+  { id:'tpat1_result',      period:'มี.ค. 70',         event:'ประกาศผลสอบ TPAT1',                             date:'2027-03-10', color:'#ec4899' },
+  { id:'alevel_exam',       period:'มี.ค. 70',         event:'วันสอบ A-Level',                                date:'2027-03-20', color:'#ec4899' },
+  { id:'alevel_result',     period:'เม.ย. 70',         event:'ประกาศผลสอบ A-Level (แบบกระดาษ)',               date:'2027-04-10', color:'#f472b6' },
+  { id:'quota_result',      period:'พ.ค. 70',          event:'ประกาศผลรอบ Quota',                             date:'2027-05-01', color:'#a855f7' },
+  { id:'admission_apply',   period:'พ.ค. 70',          event:'สมัครรอบ Admission',                             date:'2027-05-10', color:'#9333ea' },
+  { id:'admission_result',  period:'พ.ค. 70',          event:'ประกาศผลรอบ Admission',                          date:'2027-05-25', color:'#9333ea' },
+  { id:'direct_apply',      period:'พ.ค. - มิ.ย. 70', event:'สมัครรอบ Direct Admission',                      date:'2027-05-28', color:'#7c3aed' },
+  { id:'direct_result',     period:'มิ.ย. 70',         event:'ประกาศผลรอบ Direct Admission',                  date:'2027-06-15', color:'#6d28d9' },
+];
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function getReadPct(sub) {
+  if (!sub || !sub.topics || !sub.topics.length) return 0;
+  return Math.round((sub.topics.filter(t => t.read).length / sub.topics.length) * 100);
+}
+function getAvgScore(sub) {
+  if (!sub.mockScores || !sub.mockScores.length) return null;
+  return Math.round(sub.mockScores.reduce((a,b) => a+b, 0) / sub.mockScores.length);
+}
+function getLastScore(sub) { return sub.mockScores && sub.mockScores.length ? sub.mockScores[sub.mockScores.length-1] : null; }
+function getCountdown(dateStr) {
+  const diff = new Date(dateStr) - new Date();
+  if (diff < 0) return { text: 'ผ่านแล้ว', past: true };
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  if (days > 0) return { text: `${days} วัน`, past: false };
+  return { text: `${hours} ชั่วโมง`, past: false };
+}
+function createInitialSubjects() {
+  return Object.entries(MASTER_CURRICULUM).map(([id, topics]) => ({
+    id, topics: topics.map(t => ({ name: t, read: false })), mockScores: [],
+  }));
+}
+
+// ── Components ────────────────────────────────────────────────────────────────
+function ProgressRing({ pct, size=80, stroke=8, color='#6366f1' }) {
+  const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
-  const offset = circ - (pct/100)*circ;
+  const offset = circ - (pct / 100) * circ;
   return (
-    <svg width={size} height={size}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={stroke} />
-      <circle className="progress-ring-circle" cx={size/2} cy={size/2} r={r} fill="none"
-        stroke={color} strokeWidth={stroke} strokeLinecap="round"
-        strokeDasharray={circ} strokeDashoffset={offset} />
-      <text x="50%" y="50%" textAnchor="middle" dy=".35em" fontSize={size*0.22} fill="white" fontWeight="700">{pct}%</text>
+    <svg width={size} height={size} style={{transform:'rotate(-90deg)'}}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={stroke}/>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+        style={{transition:'stroke-dashoffset 0.6s ease'}}/>
+      <text x={size/2} y={size/2} fill="white" fontSize={size*0.2} textAnchor="middle"
+        dominantBaseline="middle"
+        style={{transform:`rotate(90deg)`,transformOrigin:`${size/2}px ${size/2}px`}}>
+        {Math.round(pct)}%
+      </text>
     </svg>
   );
-};
+}
 
-const MiniChart = ({ history, target, color }) => {
-  if (!history || history.length < 2) return (
-    <div className="flex items-center justify-center h-16 text-xs" style={{color:'rgba(255,255,255,0.3)'}}>
-      บันทึก 2 ครั้งขึ้นไปเพื่อดู trend
-    </div>
-  );
-  const W=300, H=70, P=8;
-  const max=100, min=0;
-  const xS = (W-P*2)/(history.length-1);
-  const yOf = s => H - P - ((s-min)/(max-min))*(H-P*2);
-  const pts = history.map((e,i)=>`${P+i*xS},${yOf(e.score)}`).join(' ');
-  const tY = yOf(target||0);
+function MiniChart({ scores, color='#6366f1' }) {
+  if (!scores || scores.length < 2)
+    return <div style={{height:40,display:'flex',alignItems:'center',justifyContent:'center',opacity:.35,fontSize:12}}>ยังไม่มีข้อมูล</div>;
+  const pts = scores.slice(-8);
+  const w = 120, h = 40;
+  const polyPts = pts.map((s,i) => `${(i/(pts.length-1))*w},${h-((s/100)*h)}`).join(' ');
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',height:'70px'}}>
-      {target>0 && <line x1={P} y1={tY} x2={W-P} y2={tY} stroke="rgba(255,255,255,0.2)" strokeDasharray="3" strokeWidth="1"/>}
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round"/>
-      {history.map((e,i)=>(
-        <g key={i}>
-          <circle cx={P+i*xS} cy={yOf(e.score)} r="3" fill={color} stroke="#0f0f1a" strokeWidth="1.5"/>
-          <text x={P+i*xS} y={yOf(e.score)-7} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.6)">{e.score}</text>
-        </g>
-      ))}
+    <svg width={w} height={h} style={{overflow:'visible'}}>
+      <polyline points={polyPts} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+      {pts.map((s,i) => <circle key={i} cx={(i/(pts.length-1))*w} cy={h-((s/100)*h)} r="3.5" fill={color}/>)}
     </svg>
   );
-};
+}
 
-// ---- Subject Modal ----
-const SubjectModal = ({ subject, onClose, onUpdateTopic, onAddCustomTopic, onDeleteCustomTopic, onAddScore, onUpdateTarget }) => {
-  if (!subject) return null;
-  const [newScore, setNewScore] = React.useState('');
-  const [customTopic, setCustomTopic] = React.useState('');
-  const col = SUB_COLORS[subject.id] || SUB_COLORS.soc;
-  const latest = subject.scoreHistory?.length ? subject.scoreHistory[subject.scoreHistory.length-1].score : 0;
-
+function Toast({ message, type, onClose }) {
+  useEffect(() => { const t = setTimeout(onClose, 3500); return () => clearTimeout(t); }, []);
+  const colors = { error:'#ef4444', success:'#10b981', info:'#6366f1' };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}/>
-      <div className="glass-dark rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col slide-up overflow-hidden relative z-10" style={{border:'1px solid rgba(255,255,255,0.12)'}}>
-        {/* Header */}
-        <div className="p-5 flex justify-between items-center" style={{background:`linear-gradient(135deg,${col.from}22,${col.to}11)`}}>
-          <div>
-            <h2 className="text-xl font-bold text-white">{subject.name}</h2>
-            <p className="text-xs mt-0.5" style={{color:col.text}}>น้ำหนัก {subject.weight}% • คะแนนล่าสุด {latest}/100</p>
-          </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-all">✕</button>
+    <div className="toast-anim" style={{
+      position:'fixed', top:72, right:16, zIndex:9999,
+      background: colors[type] || colors.info, color:'white',
+      padding:'12px 18px', borderRadius:12, maxWidth:280, fontSize:14,
+      boxShadow:'0 4px 24px rgba(0,0,0,0.5)', cursor:'pointer',
+    }} onClick={onClose}>{message}</div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+function App() {
+  const [subjects, setSubjects]       = useState(createInitialSubjects());
+  const [logs, setLogs]               = useState([]);
+  const [streak, setStreak]           = useState(0);
+  const [weeklyPlan, setWeeklyPlan]   = useState({mon:'',tue:'',wed:'',thu:'',fri:'',sat:'',sun:''});
+  const [tcasEvents, setTcasEvents]   = useState(DEFAULT_TCAS);
+  const [activeTab, setActiveTab]     = useState('overview');
+  const [selectedSubId, setSelectedSubId] = useState(null);
+  const [toast, setToast]             = useState(null);
+  const [syncing, setSyncing]         = useState(false);
+  const [editingTcas, setEditingTcas] = useState(null);
+  const [mockInput, setMockInput]     = useState('');
+  const weeklyTimerRef                = useRef(null);
+
+  const selectedSub = selectedSubId ? subjects.find(s => s.id === selectedSubId) : null;
+
+  const showToast = useCallback((message, type='info') => setToast({ message, type }), []);
+
+  // Auth
+  useEffect(() => {
+    auth.signInAnonymously().catch(e => showToast('Auth: ' + e.message, 'error'));
+  }, []);
+
+  // Firestore realtime sync
+  useEffect(() => {
+    const unsub = db.doc(DOC_PATH).onSnapshot(snap => {
+      if (snap.exists) {
+        const d = snap.data();
+        if (d.subjects)    setSubjects(d.subjects);
+        if (d.logs)        setLogs(d.logs);
+        if (d.streak != null) setStreak(d.streak);
+        if (d.weeklyPlan)  setWeeklyPlan(d.weeklyPlan);
+        if (d.tcasEvents)  setTcasEvents(d.tcasEvents);
+      }
+    }, e => showToast('โหลดข้อมูลไม่ได้: ' + e.message, 'error'));
+    return () => unsub();
+  }, []);
+
+  const save = async (updates) => {
+    setSyncing(true);
+    try { await db.doc(DOC_PATH).set(updates, { merge: true }); }
+    catch(e) { showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error'); }
+    finally { setSyncing(false); }
+  };
+
+  // Subject actions
+  const toggleTopic = (subId, idx) => {
+    const updated = subjects.map(s => s.id !== subId ? s : {
+      ...s, topics: s.topics.map((t,i) => i===idx ? {...t, read: !t.read} : t)
+    });
+    setSubjects(updated);
+    save({ subjects: updated });
+  };
+
+  const addMockScore = (subId, score) => {
+    const updated = subjects.map(s => s.id !== subId ? s : { ...s, mockScores: [...s.mockScores, score] });
+    const newLogs = [{ subId, score, date: new Date().toISOString() }, ...logs].slice(0, 200);
+    const newStreak = streak + 1;
+    setSubjects(updated); setLogs(newLogs); setStreak(newStreak);
+    save({ subjects: updated, logs: newLogs, streak: newStreak });
+    showToast(`บันทึก ${score}% ✓`, 'success');
+  };
+
+  // TCAS
+  const updateTcasEvent = (id, changes) => {
+    const updated = tcasEvents.map(e => e.id === id ? { ...e, ...changes } : e);
+    setTcasEvents(updated);
+    setEditingTcas(null);
+    save({ tcasEvents: updated });
+    showToast('บันทึกกำหนดการแล้ว ✓', 'success');
+  };
+
+  // Weekly plan debounced save
+  const updateWeekly = (key, val) => {
+    const updated = { ...weeklyPlan, [key]: val };
+    setWeeklyPlan(updated);
+    clearTimeout(weeklyTimerRef.current);
+    weeklyTimerRef.current = setTimeout(() => save({ weeklyPlan: updated }), 800);
+  };
+
+  // Derived
+  const earnedBadges = BADGES.filter(b => b.check(streak, logs, subjects));
+  const overallPct   = subjects.length ? Math.round(subjects.reduce((a,s) => a+getReadPct(s), 0) / subjects.length) : 0;
+  const nextTcas     = tcasEvents.filter(e => !getCountdown(e.date).past).sort((a,b) => new Date(a.date)-new Date(b.date))[0];
+
+  // ── Overview Tab ───────────────────────────────────────────────────────────
+  const OverviewTab = () => (
+    <div className="fade-in">
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:14,marginBottom:20}}>
+        {/* Streak */}
+        <div className="glass" style={{borderRadius:16,padding:18,textAlign:'center'}}>
+          <div style={{fontSize:36}}>🔥</div>
+          <div style={{fontSize:30,fontWeight:800,color:'#f97316'}}>{streak}</div>
+          <div style={{fontSize:12,opacity:.55}}>วันติดต่อกัน</div>
         </div>
-
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          {/* Chart */}
-          <div className="rounded-xl p-4" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)'}}>
-            <p className="text-xs font-bold mb-3" style={{color:'rgba(255,255,255,0.4)'}}>MOCK TEST TREND</p>
-            <MiniChart history={subject.scoreHistory} target={subject.targetScore} color={col.from}/>
+        {/* Overall */}
+        <div className="glass" style={{borderRadius:16,padding:18,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+          <ProgressRing pct={overallPct} size={70} stroke={7} color="#a78bfa"/>
+          <div style={{fontSize:11,opacity:.5,marginTop:6}}>ภาพรวม</div>
+        </div>
+        {/* Badges */}
+        <div className="glass" style={{borderRadius:16,padding:18}}>
+          <div style={{fontSize:11,opacity:.55,marginBottom:8}}>เหรียญรางวัล</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+            {BADGES.map(b => {
+              const earned = earnedBadges.find(e => e.id === b.id);
+              return <span key={b.id} title={b.desc} style={{fontSize:22,opacity:earned?1:0.2,cursor:'help'}}>{b.icon}</span>;
+            })}
           </div>
+        </div>
+        {/* Logs count */}
+        <div className="glass" style={{borderRadius:16,padding:18,textAlign:'center'}}>
+          <div style={{fontSize:30,fontWeight:800,color:'#34d399'}}>{logs.length}</div>
+          <div style={{fontSize:12,opacity:.55}}>Mock Tests</div>
+        </div>
+      </div>
 
-          {/* Score inputs */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl p-4" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)'}}>
-              <p className="text-xs font-bold mb-2" style={{color:'rgba(255,255,255,0.4)'}}>🎯 เป้าหมาย</p>
-              <input type="number" value={subject.targetScore||''} onChange={e=>onUpdateTarget(subject.id,e.target.value)}
-                className="w-full bg-transparent text-xl font-bold text-white outline-none border-b border-white/20 pb-1" placeholder="0-100"/>
-            </div>
-            <div className="rounded-xl p-4" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)'}}>
-              <p className="text-xs font-bold mb-2" style={{color:'rgba(255,255,255,0.4)'}}>📝 เพิ่มคะแนน Mock</p>
-              <div className="flex gap-2">
-                <input type="number" value={newScore} onChange={e=>setNewScore(e.target.value)}
-                  className="flex-1 bg-transparent text-xl font-bold text-white outline-none border-b border-white/20 pb-1" placeholder="0-100"/>
-                <button onClick={()=>{if(newScore){onAddScore(subject.id,parseInt(newScore));setNewScore('');}}}
-                  className="px-3 py-1 rounded-lg text-xs font-bold text-white transition-all"
-                  style={{background:`linear-gradient(135deg,${col.from},${col.to})`}}>บันทึก</button>
+      {/* Subject cards */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))',gap:16}}>
+        {subjects.map(sub => {
+          const c = SUB_COLORS[sub.id] || {from:'#6366f1',to:'#4f46e5',text:'#c7d2fe',label:sub.id};
+          const pct = getReadPct(sub);
+          const avg = getAvgScore(sub);
+          const last = getLastScore(sub);
+          return (
+            <div key={sub.id} className="card-hover" onClick={() => setSelectedSubId(sub.id)}
+              style={{background:`linear-gradient(135deg,${c.from},${c.to})`,borderRadius:20,padding:20,
+                cursor:'pointer',boxShadow:'0 4px 20px rgba(0,0,0,0.3)'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
+                <div>
+                  <div style={{color:c.text,fontSize:11,fontWeight:700,letterSpacing:.3,marginBottom:4}}>{c.label}</div>
+                  <div style={{fontSize:13,opacity:.85}}>
+                    {sub.topics.filter(t=>t.read).length}/{sub.topics.length} บท
+                  </div>
+                </div>
+                <ProgressRing pct={pct} size={58} stroke={6} color="rgba(255,255,255,0.9)"/>
+              </div>
+              <div style={{background:'rgba(0,0,0,0.22)',borderRadius:8,padding:'6px 10px',fontSize:12}}>
+                {avg !== null
+                  ? `📊 avg ${avg}% · สูงสุด ${Math.max(...sub.mockScores)}%`
+                  : '📝 ยังไม่มี mock score'}
               </div>
             </div>
-          </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 
-          {/* Checklist */}
-          <div>
-            <p className="text-xs font-bold mb-3" style={{color:'rgba(255,255,255,0.4)'}}>CONTENT CHECKLIST</p>
-            <div className="flex gap-2 mb-4">
-              <input type="text" value={customTopic} onChange={e=>setCustomTopic(e.target.value)} placeholder="เพิ่มหัวข้อเรียน..."
-                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/30 transition-all"/>
-              <button onClick={()=>{if(customTopic.trim()){onAddCustomTopic(subject.id,customTopic.trim());setCustomTopic('');}}}
-                className="px-4 py-2 rounded-lg text-sm font-bold text-white" style={{background:`linear-gradient(135deg,${col.from},${col.to})`}}>+ เพิ่ม</button>
+  // ── Analytics Tab ──────────────────────────────────────────────────────────
+  const AnalyticsTab = () => (
+    <div className="fade-in">
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:16,marginBottom:20}}>
+        <div className="glass" style={{borderRadius:16,padding:20}}>
+          <div style={{fontSize:12,opacity:.55,marginBottom:4}}>ความคืบหน้าภาพรวม</div>
+          <div style={{fontSize:32,fontWeight:800,color:'#a78bfa'}}>{overallPct}%</div>
+          <div style={{fontSize:12,opacity:.4}}>เฉลี่ยทุกวิชา</div>
+        </div>
+        <div className="glass" style={{borderRadius:16,padding:20}}>
+          <div style={{fontSize:12,opacity:.55,marginBottom:4}}>Mock Tests ทั้งหมด</div>
+          <div style={{fontSize:32,fontWeight:800,color:'#34d399'}}>{logs.length}</div>
+          <div style={{fontSize:12,opacity:.4}}>ครั้งที่ทำ</div>
+        </div>
+        <div className="glass" style={{borderRadius:16,padding:20}}>
+          <div style={{fontSize:12,opacity:.55,marginBottom:4}}>Streak ปัจจุบัน</div>
+          <div style={{fontSize:32,fontWeight:800,color:'#f97316'}}>{streak}</div>
+          <div style={{fontSize:12,opacity:.4}}>วันติดต่อกัน</div>
+        </div>
+        <div className="glass" style={{borderRadius:16,padding:20}}>
+          <div style={{fontSize:12,opacity:.55,marginBottom:4}}>เหรียญที่ได้</div>
+          <div style={{fontSize:32,fontWeight:800,color:'#fbbf24'}}>{earnedBadges.length}/{BADGES.length}</div>
+          <div style={{fontSize:12,opacity:.4}}>badges</div>
+        </div>
+      </div>
+      {/* Per-subject analytics */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:14}}>
+        {subjects.map(sub => {
+          const c = SUB_COLORS[sub.id] || {from:'#6366f1',label:sub.id};
+          const avg = getAvgScore(sub);
+          const pct = getReadPct(sub);
+          return (
+            <div key={sub.id} className="glass" style={{borderRadius:16,padding:16}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:10}}>
+                <div style={{fontSize:13,fontWeight:700}}>{c.label}</div>
+                <div style={{fontSize:13,fontWeight:700,color:c.from}}>{avg !== null ? avg+'%' : '-'}</div>
+              </div>
+              <MiniChart scores={sub.mockScores} color={c.from}/>
+              <div style={{marginTop:10,display:'flex',alignItems:'center',gap:8}}>
+                <div style={{flex:1,height:5,background:'rgba(255,255,255,0.08)',borderRadius:3}}>
+                  <div style={{width:`${pct}%`,height:'100%',background:`linear-gradient(90deg,${c.from},${c.to||c.from})`,borderRadius:3,transition:'width 0.5s'}}/>
+                </div>
+                <span style={{fontSize:11,opacity:.55,whiteSpace:'nowrap'}}>{pct}% อ่าน</span>
+              </div>
+              {sub.mockScores.length > 0 && (
+                <div style={{marginTop:8,display:'flex',gap:12,fontSize:11,opacity:.6}}>
+                  <span>🎯 สูงสุด {Math.max(...sub.mockScores)}%</span>
+                  <span>📌 {sub.mockScores.length} ครั้ง</span>
+                </div>
+              )}
             </div>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {(subject.topics||[]).map((t,idx)=>(
-                <div key={idx} className="flex items-center gap-3 p-3 rounded-lg transition-all group"
-                  style={{background: t.completed ? `${col.from}18` : 'rgba(255,255,255,0.03)', border:`1px solid ${t.completed ? col.from+'40' : 'rgba(255,255,255,0.06)'}`}}>
-                  <input type="checkbox" checked={t.completed} onChange={()=>onUpdateTopic(subject.id,idx)}
-                    className="h-4 w-4 rounded accent-purple-500 cursor-pointer"/>
-                  <span className={`flex-1 text-sm ${t.completed ? 'line-through' : ''}`} style={{color: t.completed ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.85)'}}>{t.name}</span>
-                  <button onClick={()=>onDeleteCustomTopic(subject.id,idx)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all text-xs">✕</button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  // ── Weekly Tab ─────────────────────────────────────────────────────────────
+  const DAYS = [['mon','จ.'],['tue','อ.'],['wed','พ.'],['thu','พฤ.'],['fri','ศ.'],['sat','ส.'],['sun','อา.']];
+  const WeeklyTab = () => (
+    <div className="fade-in">
+      <div className="glass" style={{borderRadius:18,padding:20}}>
+        <h3 style={{margin:'0 0 16px',fontSize:16,fontWeight:700}}>📅 แผนการเรียนรายสัปดาห์</h3>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:10}}>
+          {DAYS.map(([key, label]) => (
+            <div key={key} style={{display:'flex',flexDirection:'column',gap:6}}>
+              <div style={{textAlign:'center',fontSize:13,fontWeight:700,opacity:.6,
+                paddingBottom:6,borderBottom:'1px solid rgba(255,255,255,0.08)'}}>{label}</div>
+              <textarea
+                value={weeklyPlan[key] || ''}
+                onChange={e => updateWeekly(key, e.target.value)}
+                placeholder="แผน..."
+                style={{width:'100%',minHeight:110,background:'rgba(255,255,255,0.04)',
+                  border:'1px solid rgba(255,255,255,0.08)',borderRadius:10,color:'#e2e8f0',
+                  fontSize:12,padding:8,resize:'vertical',lineHeight:1.5}}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Logs Tab ───────────────────────────────────────────────────────────────
+  const LogsTab = () => (
+    <div className="fade-in">
+      <div className="glass" style={{borderRadius:18,padding:20}}>
+        <h3 style={{margin:'0 0 16px',fontSize:16,fontWeight:700}}>📋 ประวัติ Mock Test</h3>
+        {logs.length === 0
+          ? <div style={{textAlign:'center',opacity:.35,padding:48,fontSize:15}}>ยังไม่มีบันทึก</div>
+          : <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {logs.map((log, i) => {
+                const c = SUB_COLORS[log.subId] || {from:'#6366f1',label:log.subId};
+                const scoreColor = log.score>=80?'#34d399':log.score>=60?'#fbbf24':'#f87171';
+                return (
+                  <div key={i} style={{display:'flex',alignItems:'center',gap:12,
+                    background:'rgba(255,255,255,0.03)',borderRadius:12,padding:'10px 16px',
+                    borderLeft:`3px solid ${c.from}`}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:600}}>{c.label}</div>
+                      <div style={{fontSize:11,opacity:.45}}>
+                        {new Date(log.date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+                      </div>
+                    </div>
+                    <div style={{fontSize:20,fontWeight:800,color:scoreColor}}>{log.score}%</div>
+                  </div>
+                );
+              })}
+            </div>
+        }
+      </div>
+    </div>
+  );
+
+  // ── TCAS Tab ───────────────────────────────────────────────────────────────
+  const TcasTab = () => (
+    <div className="fade-in">
+      {/* Next event highlight */}
+      {nextTcas && (
+        <div style={{background:`linear-gradient(135deg,${nextTcas.color}25,${nextTcas.color}08)`,
+          border:`1px solid ${nextTcas.color}40`,borderRadius:18,padding:20,marginBottom:20}}>
+          <div style={{fontSize:11,opacity:.6,marginBottom:6}}>🎯 กำหนดการถัดไป</div>
+          <div style={{fontSize:18,fontWeight:800,marginBottom:6}}>{nextTcas.event}</div>
+          <div style={{display:'flex',gap:16,alignItems:'center'}}>
+            <span style={{fontSize:13,opacity:.6}}>{nextTcas.period}</span>
+            <span style={{fontSize:14,fontWeight:700,color:nextTcas.color}}>
+              ⏳ อีก {getCountdown(nextTcas.date).text}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Event list */}
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        {tcasEvents.map(ev => {
+          const cd = getCountdown(ev.date);
+          const isEdit = editingTcas === ev.id;
+          return (
+            <div key={ev.id} style={{background:'rgba(255,255,255,0.04)',borderRadius:14,padding:16,
+              borderLeft:`4px solid ${cd.past ? 'rgba(255,255,255,0.15)' : ev.color}`,
+              opacity: cd.past ? 0.5 : 1,
+              display:'flex',alignItems:'center',gap:12}}>
+              {/* Indicator */}
+              <div style={{width:9,height:9,borderRadius:'50%',
+                background: cd.past ? 'rgba(255,255,255,0.2)' : ev.color,flexShrink:0}}/>
+              {/* Content */}
+              <div style={{flex:1,minWidth:0}}>
+                {isEdit ? (
+                  <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                    <input id={`ev-n-${ev.id}`} defaultValue={ev.event}
+                      style={{background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.2)',
+                        borderRadius:8,color:'white',padding:'6px 10px',fontSize:13,width:'100%'}}/>
+                    <div style={{display:'flex',gap:8}}>
+                      <input type="date" id={`ev-d-${ev.id}`} defaultValue={ev.date}
+                        style={{background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.2)',
+                          borderRadius:8,color:'white',padding:'6px 10px',fontSize:12,flex:1}}/>
+                      <button onClick={() => updateTcasEvent(ev.id, {
+                          event: document.getElementById(`ev-n-${ev.id}`).value,
+                          date:  document.getElementById(`ev-d-${ev.id}`).value,
+                        })}
+                        style={{background:'#10b981',border:'none',borderRadius:8,color:'white',
+                          padding:'6px 14px',cursor:'pointer',fontSize:12,fontWeight:700}}>บันทึก</button>
+                      <button onClick={() => setEditingTcas(null)}
+                        style={{background:'rgba(255,255,255,0.08)',border:'none',borderRadius:8,color:'white',
+                          padding:'6px 10px',cursor:'pointer',fontSize:12}}>ยกเลิก</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{fontSize:14,fontWeight:600,marginBottom:3,
+                      overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.event}</div>
+                    <div style={{fontSize:12,opacity:.5}}>{ev.period} &nbsp;·&nbsp;
+                      {new Date(ev.date).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'})}</div>
+                  </>
+                )}
+              </div>
+              {/* Countdown */}
+              {!isEdit && (
+                <div style={{textAlign:'right',flexShrink:0}}>
+                  <div style={{fontSize:13,fontWeight:700,
+                    color: cd.past ? 'rgba(255,255,255,0.3)' : ev.color}}>{cd.text}</div>
+                  {!cd.past && <div style={{fontSize:11,opacity:.35}}>เหลือ</div>}
+                </div>
+              )}
+              {/* Edit btn */}
+              {!isEdit && (
+                <button onClick={() => setEditingTcas(ev.id)}
+                  style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',
+                    borderRadius:8,color:'white',padding:'6px 10px',cursor:'pointer',fontSize:13,flexShrink:0}}>✏️</button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  // ── Subject Modal ──────────────────────────────────────────────────────────
+  const Modal = () => {
+    if (!selectedSub) return null;
+    const c = SUB_COLORS[selectedSub.id] || {from:'#6366f1',to:'#4f46e5',text:'#c7d2fe',label:selectedSub.id};
+    const pct = getReadPct(selectedSub);
+    return (
+      <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',zIndex:1000,
+        display:'flex',alignItems:'center',justifyContent:'center',padding:16,backdropFilter:'blur(4px)'}}
+        onClick={e => { if(e.target===e.currentTarget) setSelectedSubId(null); }}>
+        <div style={{background:'#15152a',borderRadius:24,width:'100%',maxWidth:520,
+          maxHeight:'88vh',overflow:'auto',boxShadow:'0 24px 80px rgba(0,0,0,0.7)'}}>
+          {/* Modal header */}
+          <div style={{background:`linear-gradient(135deg,${c.from},${c.to})`,borderRadius:'24px 24px 0 0',padding:24}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div>
+                <div style={{color:c.text,fontSize:11,fontWeight:700,letterSpacing:.5,marginBottom:4}}>{c.label}</div>
+                <div style={{fontSize:22,fontWeight:800}}>ความคืบหน้า {pct}%</div>
+                <div style={{fontSize:13,opacity:.75,marginTop:2}}>
+                  {selectedSub.topics.filter(t=>t.read).length}/{selectedSub.topics.length} บทที่อ่านแล้ว
+                </div>
+              </div>
+              <button onClick={() => setSelectedSubId(null)}
+                style={{background:'rgba(0,0,0,0.3)',border:'none',borderRadius:'50%',
+                  width:36,height:36,color:'white',cursor:'pointer',fontSize:20,
+                  display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
+            </div>
+          </div>
+          <div style={{padding:24}}>
+            {/* Topics */}
+            <div style={{marginBottom:24}}>
+              <div style={{fontSize:14,fontWeight:700,marginBottom:10,opacity:.7}}>บทที่เรียน</div>
+              {selectedSub.topics.map((topic, i) => (
+                <div key={i} onClick={() => toggleTopic(selectedSub.id, i)}
+                  style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',
+                    borderRadius:10,cursor:'pointer',marginBottom:5,transition:'background 0.15s',
+                    background: topic.read ? `${c.from}1a` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${topic.read ? c.from+'30' : 'rgba(255,255,255,0.05)'}`}}>
+                  <div style={{width:22,height:22,borderRadius:7,flexShrink:0,
+                    background: topic.read ? c.from : 'rgba(255,255,255,0.08)',
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                    fontSize:13,fontWeight:700,transition:'background 0.2s'}}>
+                    {topic.read ? '✓' : ''}
+                  </div>
+                  <span style={{fontSize:13,textDecoration:topic.read?'line-through':'none',opacity:topic.read?.55:1}}>
+                    {topic.name}
+                  </span>
                 </div>
               ))}
             </div>
+            {/* Mock score */}
+            <div style={{background:'rgba(255,255,255,0.03)',borderRadius:14,padding:18,
+              border:'1px solid rgba(255,255,255,0.06)'}}>
+              <div style={{fontSize:14,fontWeight:700,marginBottom:12,opacity:.7}}>บันทึกคะแนน Mock Test</div>
+              <div style={{display:'flex',gap:8,marginBottom:12}}>
+                <input type="number" min="0" max="100" value={mockInput}
+                  onChange={e => setMockInput(e.target.value)}
+                  onKeyDown={e => { if(e.key==='Enter'){ const s=parseInt(mockInput); if(!isNaN(s)&&s>=0&&s<=100){addMockScore(selectedSub.id,s);setMockInput('');} }}}
+                  placeholder="คะแนน (0–100)"
+                  style={{flex:1,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.12)',
+                    borderRadius:10,color:'white',padding:'10px 14px',fontSize:14}}/>
+                <button onClick={() => {
+                  const s = parseInt(mockInput);
+                  if(isNaN(s)||s<0||s>100) return showToast('กรุณากรอกคะแนน 0–100', 'error');
+                  addMockScore(selectedSub.id, s);
+                  setMockInput('');
+                }} style={{background:`linear-gradient(135deg,${c.from},${c.to})`,
+                  border:'none',borderRadius:10,color:'white',padding:'10px 20px',
+                  cursor:'pointer',fontWeight:700,fontSize:14}}>บันทึก</button>
+              </div>
+              {selectedSub.mockScores.length > 0 && (
+                <>
+                  <MiniChart scores={selectedSub.mockScores} color={c.from}/>
+                  <div style={{display:'flex',gap:16,marginTop:10,fontSize:12,opacity:.6}}>
+                    <span>avg: {getAvgScore(selectedSub)}%</span>
+                    <span>สูงสุด: {Math.max(...selectedSub.mockScores)}%</span>
+                    <span>ต่ำสุด: {Math.min(...selectedSub.mockScores)}%</span>
+                    <span>ทำมา {selectedSub.mockScores.length} ครั้ง</span>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-};
-
-// ---- Main App ----
-const App = () => {
-  const [authMode, setAuthMode] = React.useState('login');
-  const [currentSession, setCurrentSession] = React.useState(null);
-  const [isAuthReady, setIsAuthReady] = React.useState(false);
-  const [toast, setToast] = React.useState(null);
-
-  // Auth inputs
-  const [usernameInput, setUsernameInput] = React.useState('');
-  const [passwordInput, setPasswordInput] = React.useState('');
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [errMsg, setErrMsg] = React.useState('');
-
-  // Data
-  const [subjects, setSubjects] = React.useState([]);
-  const [logs, setLogs] = React.useState([]);
-  const [familyAccounts, setFamilyAccounts] = React.useState([]);
-  const [weeklyPlan, setWeeklyPlan] = React.useState({ mon:[],tue:[],wed:[],thu:[],fri:[],sat:[],sun:[] });
-  const [streak, setStreak] = React.useState({ current:0, longest:0, lastDate:'' });
-
-  // UI
-  const [selectedSubjectId, setSelectedSubjectId] = React.useState(null);
-  const [showAdminPanel, setShowAdminPanel] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState('dashboard'); // dashboard | analytics | weekly | logs
-  const [newFamU, setNewFamU] = React.useState('');
-  const [newFamP, setNewFamP] = React.useState('');
-
-  const selectedSubject = selectedSubjectId ? subjects.find(s=>s.id===selectedSubjectId) : null;
-
-  const showToast = (msg, type='error') => {
-    setToast({msg,type});
-    setTimeout(()=>setToast(null),4000);
+    );
   };
 
-  const createInitialData = () => [
-    { id:'tpat1', name:'TPAT1 (ความถนัดแพทย์)', weight:30, targetScore:60 },
-    { id:'math1', name:'คณิตศาสตร์ 1',           weight:14, targetScore:50 },
-    { id:'phy',   name:'ฟิสิกส์',                weight:9.33, targetScore:50 },
-    { id:'chem',  name:'เคมี',                   weight:9.33, targetScore:50 },
-    { id:'bio',   name:'ชีววิทยา',               weight:9.33, targetScore:50 },
-    { id:'eng',   name:'ภาษาอังกฤษ',             weight:14, targetScore:60 },
-    { id:'thai',  name:'ภาษาไทย',                weight:7, targetScore:60 },
-    { id:'soc',   name:'สังคมศึกษา',             weight:7, targetScore:50 },
-  ].map(s=>({ ...s, progress:0, scoreHistory:[], topics: (MASTER_CURRICULUM[s.id]||[]).map(t=>({name:t,completed:false})) }));
+  // ── Tabs config ────────────────────────────────────────────────────────────
+  const TABS = [
+    { id:'overview',  icon:'🏠', label:'ภาพรวม',      Content: OverviewTab  },
+    { id:'analytics', icon:'📈', label:'วิเคราะห์',    Content: AnalyticsTab },
+    { id:'weekly',    icon:'📅', label:'รายสัปดาห์',   Content: WeeklyTab    },
+    { id:'logs',      icon:'📋', label:'บันทึก',       Content: LogsTab      },
+    { id:'tcas',      icon:'🗓️', label:'TCAS',         Content: TcasTab      },
+  ];
+  const currentTab = TABS.find(t => t.id === activeTab) || TABS[0];
+  const { Content } = currentTab;
 
-  // Auth
-  React.useEffect(()=>{
-    const unsub = auth.onAuthStateChanged(u=>{
-      if(u) setIsAuthReady(true);
-      else auth.signInAnonymously().then(()=>setIsAuthReady(true)).catch(()=>setIsAuthReady(true));
-    });
-    const saved = localStorage.getItem('med71_session');
-    if(saved){ setCurrentSession(JSON.parse(saved)); setAuthMode('dashboard'); }
-    return ()=>unsub();
-  },[]);
-
-  // Data listeners
-  React.useEffect(()=>{
-    if(authMode!=='dashboard'||!isAuthReady) return;
-    const base = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data');
-
-    const u1 = base.doc('dashboard_shared').onSnapshot(doc=>{
-      if(doc.exists){
-        const loaded = doc.data().subjects||[];
-        if(!loaded.length){ setSubjects(createInitialData()); return; }
-        setSubjects(loaded.map(ls=>({
-          ...ls,
-          topics: ls.topics?.length ? ls.topics : (createInitialData().find(s=>s.id===ls.id)?.topics||[])
-        })));
-      } else { const init=createInitialData(); base.doc('dashboard_shared').set({subjects:init}); setSubjects(init); }
-    }, e=>showToast('โหลดข้อมูลไม่ได้: '+e.message));
-
-    const u2 = base.doc('weekly_plan').onSnapshot(doc=>{ if(doc.exists) setWeeklyPlan(doc.data().plan||{}); }, ()=>{});
-    const u3 = base.doc('streak').onSnapshot(doc=>{ if(doc.exists) setStreak(doc.data()); }, ()=>{});
-    const u4 = base.doc('family_accounts').onSnapshot(doc=>{ if(doc.exists) setFamilyAccounts(doc.data().accounts||[]); }, ()=>{});
-
-    const u5 = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shared_logs')
-      .onSnapshot(snap=>{ const l=[]; snap.forEach(d=>l.push({id:d.id,...d.data()})); setLogs(l.sort((a,b)=>new Date(b.time)-new Date(a.time)).slice(0,20)); }, ()=>{});
-
-    return ()=>{ u1(); u2(); u3(); u4(); u5(); };
-  },[authMode,isAuthReady]);
-
-  const save = async (newSubs) => {
-    if(!isAuthReady) return;
-    try {
-      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data')
-        .doc('dashboard_shared').set({subjects:newSubs});
-      // Update streak
-      const today = new Date().toDateString();
-      const last  = streak.lastDate;
-      const isConsec = last === new Date(Date.now()-86400000).toDateString();
-      const newCur = last===today ? streak.current : (isConsec ? streak.current+1 : 1);
-      const newStreak = { current:newCur, longest:Math.max(newCur,streak.longest||0), lastDate:today };
-      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data')
-        .doc('streak').set(newStreak);
-      setStreak(newStreak);
-    } catch(e) {
-      showToast(e.code==='permission-denied' ? '❌ Firestore Rules ไม่อนุญาต' : '❌ บันทึกไม่สำเร็จ: '+e.message);
-    }
-  };
-
-  const addLog = async (user,action) => {
-    if(!isAuthReady) return;
-    try { await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shared_logs').add({user,action,time:new Date().toISOString()}); } catch(e){}
-  };
-
-  const saveWeeklyPlan = async (plan) => {
-    try { await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('weekly_plan').set({plan}); } catch(e){}
-  };
-
-  // Handlers
-  const handleUpdateTopic = (subId,idx) => {
-    const updated = subjects.map(s=>{ if(s.id!==subId) return s; const t=s.topics.map((x,i)=>i===idx?{...x,completed:!x.completed}:x); return {...s,topics:t,progress:Math.round(t.filter(x=>x.completed).length/t.length*100)}; });
-    setSubjects(updated); save(updated); addLog(currentSession.name,`อัปเดตเนื้อหา ${subjects.find(s=>s.id===subId).name}`);
-  };
-  const handleAddCustomTopic = (subId,name) => {
-    const updated = subjects.map(s=>{ if(s.id!==subId) return s; const t=[...s.topics,{name,completed:false}]; return {...s,topics:t,progress:Math.round(t.filter(x=>x.completed).length/t.length*100)}; });
-    setSubjects(updated); save(updated);
-  };
-  const handleDeleteCustomTopic = (subId,idx) => {
-    const updated = subjects.map(s=>{ if(s.id!==subId) return s; const t=s.topics.filter((_,i)=>i!==idx); return {...s,topics:t,progress:t.length?Math.round(t.filter(x=>x.completed).length/t.length*100):0}; });
-    setSubjects(updated); save(updated);
-  };
-  const handleAddScore = (subId,score) => {
-    const updated = subjects.map(s=>s.id!==subId?s:{...s,scoreHistory:[...(s.scoreHistory||[]),{score,date:new Date().toISOString()}]});
-    setSubjects(updated); save(updated); addLog(currentSession.name,`บันทึก mock ${score} วิชา ${subjects.find(s=>s.id===subId).name}`);
-  };
-  const handleUpdateTarget = (subId,val) => {
-    const updated = subjects.map(s=>s.id!==subId?s:{...s,targetScore:val===''?0:parseInt(val)});
-    setSubjects(updated); save(updated);
-  };
-
-  const toggleWeeklySubject = (dayKey, subId) => {
-    const cur = weeklyPlan[dayKey]||[];
-    const next = cur.includes(subId) ? cur.filter(x=>x!==subId) : [...cur,subId];
-    const newPlan = {...weeklyPlan,[dayKey]:next};
-    setWeeklyPlan(newPlan); saveWeeklyPlan(newPlan);
-  };
-
-  // Computed
-  const weightedScore = subjects.reduce((acc,s)=>{
-    const lat = s.scoreHistory?.length ? s.scoreHistory[s.scoreHistory.length-1].score : 0;
-    return acc + lat*(s.weight/100);
-  },0);
-  const avgProgress = subjects.length ? subjects.reduce((a,s)=>a+s.progress,0)/subjects.length : 0;
-  const earnedBadges = BADGES.filter(b=>b.cond(subjects,streak.current,weightedScore.toFixed(1),avgProgress));
-
-  // Login
-  if(authMode==='login') return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{background:'linear-gradient(135deg,#0f0f1a 0%,#1a0f2e 50%,#0f1a1a 100%)'}}>
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🎓</div>
-          <h1 className="text-2xl font-black gradient-text">MED71 Dashboard</h1>
-          <p className="text-sm mt-1" style={{color:'rgba(255,255,255,0.4)'}}>ระบบติดตามการเตรียมสอบ</p>
-        </div>
-        <div className="glass rounded-2xl p-6">
-          <form onSubmit={e=>{ e.preventDefault(); setErrMsg(''); const found=familyAccounts.find(a=>a.username===usernameInput.trim()&&a.password===passwordInput.trim()); if(found){const s={name:found.username,role:'member'};setCurrentSession(s);localStorage.setItem('med71_session',JSON.stringify(s));setAuthMode('dashboard');addLog(found.username,'เข้าสู่ระบบ');}else setErrMsg('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'); }} className="space-y-4">
-            <div>
-              <label className="text-xs font-bold" style={{color:'rgba(255,255,255,0.5)'}}>USERNAME</label>
-              <input value={usernameInput} onChange={e=>setUsernameInput(e.target.value)} required className="mt-1 w-full rounded-xl px-4 py-3 text-sm text-white outline-none transition-all" style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)'}} placeholder="ชื่อผู้ใช้งาน"/>
-            </div>
-            <div>
-              <label className="text-xs font-bold" style={{color:'rgba(255,255,255,0.5)'}}>PASSWORD</label>
-              <input type="password" value={passwordInput} onChange={e=>setPasswordInput(e.target.value)} required className="mt-1 w-full rounded-xl px-4 py-3 text-sm text-white outline-none" style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)'}} placeholder="รหัสผ่าน"/>
-            </div>
-            {errMsg && <p className="text-xs text-red-400">{errMsg}</p>}
-            <button type="submit" className="w-full py-3 rounded-xl font-bold text-white text-sm" style={{background:'linear-gradient(135deg,#f472b6,#a78bfa,#60a5fa)'}}>เข้าสู่ระบบ</button>
-          </form>
-          <p className="text-center text-xs mt-4 cursor-pointer transition-all" style={{color:'rgba(255,255,255,0.3)'}} onClick={()=>{setAuthMode('admin_login');setErrMsg('');}}>⚙️ Admin</p>
-        </div>
-      </div>
-    </div>
-  );
-
-  if(authMode==='admin_login') return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{background:'linear-gradient(135deg,#0f0f1a,#1a1a0f)'}}>
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8"><div className="text-4xl mb-3">🛡️</div><h1 className="text-xl font-black text-white">Admin Control</h1></div>
-        <div className="glass rounded-2xl p-6">
-          <form onSubmit={e=>{ e.preventDefault(); setErrMsg(''); if(email.trim().toLowerCase()===ADMIN_EMAIL&&password===ADMIN_PASS){const s={name:'Admin 👑',role:'admin'};setCurrentSession(s);localStorage.setItem('med71_session',JSON.stringify(s));setAuthMode('dashboard');}else setErrMsg('ข้อมูลไม่ถูกต้อง'); }} className="space-y-4">
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none" style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)'}} placeholder="Admin Email"/>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none" style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)'}} placeholder="Admin Password"/>
-            {errMsg && <p className="text-xs text-red-400">{errMsg}</p>}
-            <button type="submit" className="w-full py-3 rounded-xl font-bold text-white text-sm" style={{background:'linear-gradient(135deg,#374151,#1f2937)'}}>เข้าสู่ระบบ Admin</button>
-          </form>
-          <p className="text-center text-xs mt-4 cursor-pointer" style={{color:'rgba(255,255,255,0.3)'}} onClick={()=>{setAuthMode('login');setErrMsg('');}}>← กลับ</p>
-        </div>
-      </div>
-    </div>
-  );
-
-  const isAdmin = currentSession?.role==='admin';
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen" style={{background:'#0f0f1a'}}>
-      {toast && <div className={`toast rounded-xl px-4 py-3 text-sm font-bold text-white shadow-2xl ${toast.type==='error'?'bg-red-600':'bg-emerald-600'}`}>{toast.msg}</div>}
+    <div style={{minHeight:'100vh',background:'#0f0f1a'}}>
+      {/* Header */}
+      <div style={{background:'rgba(15,15,26,0.92)',borderBottom:'1px solid rgba(255,255,255,0.07)',
+        padding:'14px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',
+        position:'sticky',top:0,zIndex:500,backdropFilter:'blur(12px)'}}>
+        <div>
+          <div style={{fontSize:17,fontWeight:800,letterSpacing:'-0.5px'}}>MED71 Dashboard</div>
+          <div style={{fontSize:11,opacity:.38}}>Monitor &amp; Evaluation · TCAS70</div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          {syncing && <span className="pulse" style={{fontSize:12,opacity:.45}}>⟳ บันทึก...</span>}
+          <span style={{fontSize:18}}>🔥 {streak}</span>
+        </div>
+      </div>
 
-      {/* Top Nav */}
-      <nav className="sticky top-0 z-40 flex items-center justify-between px-4 py-3" style={{background:'rgba(15,15,26,0.85)',backdropFilter:'blur(16px)',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-        <div className="flex items-center gap-3">
-          <span className="text-lg">🎓</span>
-          <span className="font-black text-sm gradient-text">MED71</span>
-        </div>
-        {/* Tabs */}
-        <div className="hidden md:flex gap-1 rounded-xl p-1" style={{background:'rgba(255,255,255,0.05)'}}>
-          {[['dashboard','📊 Overview'],['analytics','📈 Analytics'],['weekly','📅 Weekly'],['logs','📋 Logs']].map(([key,label])=>(
-            <button key={key} onClick={()=>setActiveTab(key)} className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-              style={activeTab===key?{background:'linear-gradient(135deg,#f472b6,#a78bfa)',color:'white'}:{color:'rgba(255,255,255,0.4)'}}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          {isAdmin && <button onClick={()=>setShowAdminPanel(!showAdminPanel)} className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{background:'rgba(99,102,241,0.2)',color:'#a5b4fc',border:'1px solid rgba(99,102,241,0.3)'}}>⚙️ Admin</button>}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{background:'rgba(255,255,255,0.05)'}}>
-            <span className="text-xs font-bold" style={{color:'rgba(255,255,255,0.6)'}}>{currentSession?.name}</span>
-            <button onClick={()=>{localStorage.removeItem('med71_session');setCurrentSession(null);setAuthMode('login');setSelectedSubjectId(null);}} className="text-xs text-red-400 hover:text-red-300">ออก</button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Mobile tabs */}
-      <div className="md:hidden flex gap-1 px-3 py-2 overflow-x-auto" style={{background:'rgba(15,15,26,0.9)',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-        {[['dashboard','📊'],['analytics','📈'],['weekly','📅'],['logs','📋']].map(([key,label])=>(
-          <button key={key} onClick={()=>setActiveTab(key)} className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-            style={activeTab===key?{background:'linear-gradient(135deg,#f472b6,#a78bfa)',color:'white'}:{color:'rgba(255,255,255,0.4)',background:'rgba(255,255,255,0.04)'}}>
-            {label}
+      {/* Tab nav */}
+      <div style={{display:'flex',gap:0,overflowX:'auto',
+        background:'rgba(255,255,255,0.02)',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)}
+            style={{border:'none',borderBottom: activeTab===t.id ? '2px solid #6366f1' : '2px solid transparent',
+              padding:'11px 18px',color: activeTab===t.id ? '#fff' : 'rgba(255,255,255,0.45)',
+              background: activeTab===t.id ? 'rgba(99,102,241,0.12)' : 'transparent',
+              cursor:'pointer',fontSize:13,whiteSpace:'nowrap',fontWeight: activeTab===t.id ? 700 : 400,
+              transition:'all 0.2s'}}>
+            {t.icon} {t.label}
           </button>
         ))}
       </div>
 
-      <div className="max-w-6xl mx-auto p-4 md:p-6">
-        {/* Admin Panel */}
-        {showAdminPanel && isAdmin && (
-          <div className="glass rounded-2xl p-5 mb-6 slide-up">
-            <h3 className="text-sm font-bold mb-4" style={{color:'#a5b4fc'}}>👥 จัดการบัญชีผู้ใช้</h3>
-            <form onSubmit={async e=>{ e.preventDefault(); const u=newFamU.trim(),p=newFamP.trim(); if(!u||!p) return; if(familyAccounts.some(a=>a.username===u)){alert('ซ้ำ');return;} const updated=[...familyAccounts,{username:u,password:p}]; setFamilyAccounts(updated); setNewFamU(''); setNewFamP(''); try{await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('family_accounts').set({accounts:updated});}catch(e){} }} className="flex gap-3 mb-4 flex-wrap">
-              <input value={newFamU} onChange={e=>setNewFamU(e.target.value)} placeholder="Username" required className="flex-1 min-w-32 rounded-xl px-3 py-2 text-sm text-white outline-none" style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)'}}/>
-              <input value={newFamP} onChange={e=>setNewFamP(e.target.value)} placeholder="Password" required className="flex-1 min-w-32 rounded-xl px-3 py-2 text-sm text-white outline-none" style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)'}}/>
-              <button type="submit" className="px-4 py-2 rounded-xl text-sm font-bold text-white" style={{background:'linear-gradient(135deg,#6366f1,#8b5cf6)'}}>+ เพิ่ม</button>
-            </form>
-            <div className="space-y-2">
-              {familyAccounts.map((acc,i)=>(
-                <div key={i} className="flex justify-between items-center px-4 py-2.5 rounded-xl text-sm" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)'}}>
-                  <span className="text-white font-bold">{acc.username} <span className="font-normal" style={{color:'rgba(255,255,255,0.4)'}}>/ {acc.password}</span></span>
-                  <button onClick={async()=>{ const up=familyAccounts.filter(a=>a.username!==acc.username); setFamilyAccounts(up); try{await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('family_accounts').set({accounts:up});}catch(e){} }} className="text-red-400 text-xs hover:text-red-300">ลบ</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ======= DASHBOARD TAB ======= */}
-        {activeTab==='dashboard' && (
-          <div className="space-y-6">
-            {/* Hero stats row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {/* Streak */}
-              <div className="glass rounded-2xl p-4 flex flex-col gap-2" style={{border:'1px solid rgba(251,191,36,0.2)',background:'rgba(251,191,36,0.05)'}}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold" style={{color:'rgba(251,191,36,0.7)'}}>🔥 STREAK</span>
-                  {streak.current>=3 && <span className="pulse-ring rounded-full w-2 h-2 bg-yellow-400"/>}
-                </div>
-                <div className="text-4xl font-black text-white">{streak.current}<span className="text-sm font-normal ml-1" style={{color:'rgba(255,255,255,0.4)'}}>วัน</span></div>
-                <div className="text-xs" style={{color:'rgba(255,255,255,0.4)'}}>สูงสุด {streak.longest||0} วัน</div>
-              </div>
-              {/* Weighted score */}
-              <div className="glass rounded-2xl p-4 flex flex-col gap-2" style={{border:'1px solid rgba(167,139,250,0.2)',background:'rgba(167,139,250,0.05)'}}>
-                <span className="text-xs font-bold" style={{color:'rgba(167,139,250,0.7)'}}>⚖️ คะแนน กสพท.</span>
-                <div className="text-4xl font-black text-white">{weightedScore.toFixed(1)}<span className="text-sm font-normal ml-1" style={{color:'rgba(255,255,255,0.4)'}}>/100</span></div>
-                <div className="w-full rounded-full h-1.5 overflow-hidden" style={{background:'rgba(255,255,255,0.08)'}}>
-                  <div className="h-full rounded-full transition-all" style={{width:`${Math.min(weightedScore,100)}%`,background:'linear-gradient(90deg,#a78bfa,#f472b6)'}}/>
-                </div>
-              </div>
-              {/* Avg progress */}
-              <div className="glass rounded-2xl p-4 flex flex-col gap-2" style={{border:'1px solid rgba(34,197,94,0.2)',background:'rgba(34,197,94,0.05)'}}>
-                <span className="text-xs font-bold" style={{color:'rgba(34,197,94,0.7)'}}>📚 เนื้อหาครบ</span>
-                <div className="text-4xl font-black text-white">{avgProgress.toFixed(0)}<span className="text-sm font-normal ml-1" style={{color:'rgba(255,255,255,0.4)'}}>%</span></div>
-                <div className="w-full rounded-full h-1.5 overflow-hidden" style={{background:'rgba(255,255,255,0.08)'}}>
-                  <div className="h-full rounded-full transition-all" style={{width:`${avgProgress}%`,background:'linear-gradient(90deg,#22c55e,#10b981)'}}/>
-                </div>
-              </div>
-              {/* Badges */}
-              <div className="glass rounded-2xl p-4 flex flex-col gap-2" style={{border:'1px solid rgba(96,165,250,0.2)',background:'rgba(96,165,250,0.05)'}}>
-                <span className="text-xs font-bold" style={{color:'rgba(96,165,250,0.7)'}}>🏅 BADGES</span>
-                <div className="text-4xl font-black text-white">{earnedBadges.length}<span className="text-sm font-normal ml-1" style={{color:'rgba(255,255,255,0.4)'}}>/{BADGES.length}</span></div>
-                <div className="flex gap-1 flex-wrap">
-                  {BADGES.map(b=>(
-                    <span key={b.id} className="text-lg" style={{opacity: earnedBadges.find(x=>x.id===b.id) ? 1 : 0.15}} title={b.label}>{b.emoji}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Subject cards */}
-            <div>
-              <h2 className="text-xs font-bold mb-3" style={{color:'rgba(255,255,255,0.4)'}}>วิชาทั้งหมด — คลิกเพื่อจัดการ</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {subjects.map(sub=>{
-                  const col = SUB_COLORS[sub.id]||SUB_COLORS.soc;
-                  const latest = sub.scoreHistory?.length ? sub.scoreHistory[sub.scoreHistory.length-1].score : null;
-                  const prev = sub.scoreHistory?.length>1 ? sub.scoreHistory[sub.scoreHistory.length-2].score : null;
-                  const trend = latest!==null && prev!==null ? (latest>prev?'↑':latest<prev?'↓':'→') : '';
-                  return (
-                    <div key={sub.id} onClick={()=>setSelectedSubjectId(sub.id)} className="card-hover rounded-2xl overflow-hidden" style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)'}}>
-                      <div className="h-1.5" style={{background:`linear-gradient(90deg,${col.from},${col.to})`}}/>
-                      <div className="p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <ProgressRing pct={sub.progress} size={48} stroke={4} color={col.from}/>
-                          <div className="text-right">
-                            {latest!==null
-                              ? <div className="text-xl font-black text-white">{latest}<span className="text-xs font-normal ml-0.5" style={{color:'rgba(255,255,255,0.4)'}}>/100</span></div>
-                              : <div className="text-xs mt-2" style={{color:'rgba(255,255,255,0.3)'}}>ยังไม่มีคะแนน</div>}
-                            {trend && <div className="text-sm font-bold" style={{color: trend==='↑'?'#4ade80':trend==='↓'?'#f87171':'#94a3b8'}}>{trend}</div>}
-                          </div>
-                        </div>
-                        <p className="text-xs font-bold text-white leading-tight mb-1">{sub.name}</p>
-                        <p className="text-xs" style={{color:'rgba(255,255,255,0.3)'}}>น้ำหนัก {sub.weight}%</p>
-                        <div className="mt-2.5 flex items-center gap-1.5">
-                          <div className="flex-1 h-1 rounded-full overflow-hidden" style={{background:'rgba(255,255,255,0.08)'}}>
-                            <div className="h-full rounded-full" style={{width:`${sub.progress}%`,background:`linear-gradient(90deg,${col.from},${col.to})`}}/>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Badges section */}
-            <div>
-              <h2 className="text-xs font-bold mb-3" style={{color:'rgba(255,255,255,0.4)'}}>ACHIEVEMENTS</h2>
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                {BADGES.map(b=>{
-                  const earned = !!earnedBadges.find(x=>x.id===b.id);
-                  return (
-                    <div key={b.id} className="glass rounded-xl p-3 text-center transition-all" style={{opacity: earned?1:0.35, border: earned?'1px solid rgba(251,191,36,0.3)':'1px solid rgba(255,255,255,0.05)', background: earned?'rgba(251,191,36,0.08)':'rgba(255,255,255,0.02)'}}>
-                      <div className={`text-2xl mb-1 ${earned?'badge-glow':''}`}>{b.emoji}</div>
-                      <p className="text-xs font-bold text-white">{b.label}</p>
-                      <p className="text-[10px] mt-0.5" style={{color:'rgba(255,255,255,0.4)'}}>{b.desc}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ======= ANALYTICS TAB ======= */}
-        {activeTab==='analytics' && (
-          <div className="space-y-6">
-            <h2 className="text-xs font-bold" style={{color:'rgba(255,255,255,0.4)'}}>MOCK TEST ANALYTICS — เปรียบเทียบทุกวิชา</h2>
-            {/* Bar comparison */}
-            <div className="glass rounded-2xl p-5">
-              <p className="text-xs font-bold mb-4" style={{color:'rgba(255,255,255,0.4)'}}>คะแนน Mock ล่าสุด vs เป้าหมาย</p>
-              <div className="space-y-3">
-                {subjects.map(sub=>{
-                  const col = SUB_COLORS[sub.id]||SUB_COLORS.soc;
-                  const latest = sub.scoreHistory?.length ? sub.scoreHistory[sub.scoreHistory.length-1].score : 0;
-                  const target = sub.targetScore||0;
-                  const pct = Math.min(latest,100);
-                  const tpct = Math.min(target,100);
-                  return (
-                    <div key={sub.id}>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs font-bold text-white">{sub.name}</span>
-                        <span className="text-xs font-bold" style={{color: latest>=target?'#4ade80':'rgba(255,255,255,0.5)'}}>{latest} <span style={{color:'rgba(255,255,255,0.3)'}}>/ {target}</span></span>
-                      </div>
-                      <div className="relative h-5 rounded-full overflow-hidden" style={{background:'rgba(255,255,255,0.06)'}}>
-                        <div className="absolute top-0 left-0 h-full rounded-full transition-all" style={{width:`${pct}%`,background:`linear-gradient(90deg,${col.from},${col.to})`}}/>
-                        <div className="absolute top-0 h-full w-0.5 bg-white/30" style={{left:`${tpct}%`}}/>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="text-xs mt-3" style={{color:'rgba(255,255,255,0.3)'}}>เส้นสีขาวแนวตั้ง = เป้าหมาย</p>
-            </div>
-
-            {/* Score trend per subject */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {subjects.filter(s=>s.scoreHistory?.length>0).map(sub=>{
-                const col = SUB_COLORS[sub.id]||SUB_COLORS.soc;
-                return (
-                  <div key={sub.id} className="glass rounded-2xl p-4">
-                    <div className="flex justify-between items-center mb-3">
-                      <p className="text-sm font-bold text-white">{sub.name}</p>
-                      <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{background:`${col.from}33`,color:col.from}}>{sub.scoreHistory.length} ครั้ง</span>
-                    </div>
-                    <MiniChart history={sub.scoreHistory} target={sub.targetScore} color={col.from}/>
-                  </div>
-                );
-              })}
-              {subjects.every(s=>!s.scoreHistory?.length) && (
-                <div className="col-span-2 text-center py-16" style={{color:'rgba(255,255,255,0.3)'}}>
-                  <div className="text-5xl mb-3">📊</div>
-                  <p>ยังไม่มีข้อมูล Mock Test กรุณากดที่วิชาและบันทึกคะแนนก่อน</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ======= WEEKLY PLAN TAB ======= */}
-        {activeTab==='weekly' && (
-          <div className="space-y-5">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xs font-bold" style={{color:'rgba(255,255,255,0.4)'}}>WEEKLY STUDY PLAN — คลิกเพื่อเพิ่ม/ลบวิชา</h2>
-            </div>
-            <div className="grid grid-cols-7 gap-2">
-              {DAY_KEYS.map((day,di)=>(
-                <div key={day} className="glass rounded-2xl p-3 min-h-48" style={{border:'1px solid rgba(255,255,255,0.07)'}}>
-                  <p className="text-xs font-black text-center mb-3" style={{color:'rgba(255,255,255,0.5)'}}>{DAYS[di]}</p>
-                  <div className="space-y-1.5">
-                    {subjects.map(sub=>{
-                      const col = SUB_COLORS[sub.id]||SUB_COLORS.soc;
-                      const active = (weeklyPlan[day]||[]).includes(sub.id);
-                      return (
-                        <button key={sub.id} onClick={()=>toggleWeeklySubject(day,sub.id)}
-                          className="day-btn w-full rounded-lg px-1.5 py-1 text-[10px] font-bold text-left leading-tight transition-all"
-                          style={active
-                            ? {background:`linear-gradient(135deg,${col.from},${col.to})`,color:'white',border:'none'}
-                            : {background:'rgba(255,255,255,0.04)',color:'rgba(255,255,255,0.3)',border:'1px solid rgba(255,255,255,0.06)'}}>
-                          {sub.name.split(' ')[0]}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {/* Summary */}
-            <div className="glass rounded-2xl p-4">
-              <p className="text-xs font-bold mb-3" style={{color:'rgba(255,255,255,0.4)'}}>สรุปภาระงานรายวิชาต่อสัปดาห์</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {subjects.map(sub=>{
-                  const col = SUB_COLORS[sub.id]||SUB_COLORS.soc;
-                  const days = DAY_KEYS.filter(d=>(weeklyPlan[d]||[]).includes(sub.id));
-                  return (
-                    <div key={sub.id} className="rounded-xl p-3" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)'}}>
-                      <p className="text-xs font-bold text-white mb-1">{sub.name}</p>
-                      <p className="text-lg font-black" style={{color:days.length?col.from:'rgba(255,255,255,0.2)'}}>{days.length} <span className="text-xs font-normal" style={{color:'rgba(255,255,255,0.4)'}}>วัน/สัปดาห์</span></p>
-                      <p className="text-[10px] mt-1" style={{color:'rgba(255,255,255,0.3)'}}>{days.map(d=>DAYS[DAY_KEYS.indexOf(d)]).join(' ')||'ยังไม่ได้วางแผน'}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ======= LOGS TAB ======= */}
-        {activeTab==='logs' && (
-          <div className="space-y-3">
-            <h2 className="text-xs font-bold" style={{color:'rgba(255,255,255,0.4)'}}>ACTIVITY LOG</h2>
-            <div className="space-y-2">
-              {logs.map((log,i)=>(
-                <div key={i} className="glass rounded-xl px-4 py-3 flex justify-between items-center" style={{border:'1px solid rgba(255,255,255,0.06)'}}>
-                  <div>
-                    <span className="text-xs font-bold" style={{color:'#a78bfa'}}>{log.user}</span>
-                    <span className="text-xs ml-2" style={{color:'rgba(255,255,255,0.6)'}}>{log.action}</span>
-                  </div>
-                  <span className="text-xs shrink-0 ml-4" style={{color:'rgba(255,255,255,0.3)'}}>{new Date(log.time).toLocaleTimeString('th-TH')}</span>
-                </div>
-              ))}
-              {!logs.length && <div className="text-center py-16 text-sm" style={{color:'rgba(255,255,255,0.3)'}}>ยังไม่มีกิจกรรม</div>}
-            </div>
-          </div>
-        )}
+      {/* Content */}
+      <div style={{padding:20,maxWidth:920,margin:'0 auto'}}>
+        <Content/>
       </div>
 
-      {selectedSubject && (
-        <SubjectModal subject={selectedSubject} onClose={()=>setSelectedSubjectId(null)}
-          onUpdateTopic={handleUpdateTopic} onAddCustomTopic={handleAddCustomTopic}
-          onDeleteCustomTopic={handleDeleteCustomTopic} onAddScore={handleAddScore}
-          onUpdateTarget={handleUpdateTarget}/>
-      )}
+      <Modal/>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)}/>}
     </div>
   );
-};
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
