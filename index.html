@@ -13,14 +13,92 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <style>
-    * { box-sizing: border-box; }
-    body { font-family: 'Noto Sans Thai', 'Inter', sans-serif; background: #0f0f1a; color: #e2e8f0; margin: 0; }
-    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
-    .glass-dark { background: rgba(15,15,26,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+    /* ── Dark mode tokens (default) ── */
+    :root {
+      --bg:           #0f0f1a;
+      --bg2:          #1a1a2e;
+      --nav-bg:       rgba(15,15,26,0.85);
+      --nav-border:   rgba(255,255,255,0.06);
+      --card-bg:      rgba(255,255,255,0.03);
+      --card-border:  rgba(255,255,255,0.07);
+      --glass-bg:     rgba(255,255,255,0.05);
+      --glass-dark:   rgba(15,15,26,0.70);
+      --glass-border: rgba(255,255,255,0.10);
+      --glass-border2:rgba(255,255,255,0.08);
+      --text:         #e2e8f0;
+      --text-muted:   rgba(255,255,255,0.40);
+      --text-dim:     rgba(255,255,255,0.30);
+      --text-faint:   rgba(255,255,255,0.20);
+      --pill-bg:      rgba(255,255,255,0.03);
+      --pill-border:  rgba(255,255,255,0.07);
+      --pill-hover:   rgba(255,255,255,0.07);
+      --input-bg:     rgba(255,255,255,0.07);
+      --input-border: rgba(255,255,255,0.10);
+      --row-bg:       rgba(255,255,255,0.04);
+      --row-border:   rgba(255,255,255,0.07);
+      --divider:      rgba(255,255,255,0.08);
+      --scrollbar:    #334155;
+      --shadow:       rgba(0,0,0,0.40);
+      --tab-inactive: rgba(255,255,255,0.04);
+      --day-inactive: rgba(255,255,255,0.04);
+      --sub-bg:       rgba(15,15,26,0.7);
+      --bar-track:    rgba(255,255,255,0.08);
+      --bar-track2:   rgba(255,255,255,0.06);
+      --bar-track3:   rgba(255,255,255,0.07);
+      --road-line:    rgba(255,255,255,0.15);
+      --exam-line-c:  rgba(255,255,255,0.10);
+      --modal-overlay:rgba(0,0,0,0.70);
+      --ph-inactive:  rgba(255,255,255,0.08);
+      --theme-transition: background .25s, color .25s, border-color .25s, box-shadow .25s;
+    }
+
+    /* ── Light mode tokens ── */
+    body.light {
+      --bg:           #f0f4f8;
+      --bg2:          #e2e8f0;
+      --nav-bg:       rgba(240,244,248,0.92);
+      --nav-border:   rgba(0,0,0,0.08);
+      --card-bg:      rgba(255,255,255,0.80);
+      --card-border:  rgba(0,0,0,0.08);
+      --glass-bg:     rgba(255,255,255,0.70);
+      --glass-dark:   rgba(240,244,248,0.85);
+      --glass-border: rgba(0,0,0,0.10);
+      --glass-border2:rgba(0,0,0,0.07);
+      --text:         #1e293b;
+      --text-muted:   rgba(30,41,59,0.55);
+      --text-dim:     rgba(30,41,59,0.40);
+      --text-faint:   rgba(30,41,59,0.25);
+      --pill-bg:      rgba(255,255,255,0.60);
+      --pill-border:  rgba(0,0,0,0.08);
+      --pill-hover:   rgba(255,255,255,0.90);
+      --input-bg:     rgba(255,255,255,0.80);
+      --input-border: rgba(0,0,0,0.12);
+      --row-bg:       rgba(255,255,255,0.60);
+      --row-border:   rgba(0,0,0,0.07);
+      --divider:      rgba(0,0,0,0.08);
+      --scrollbar:    #94a3b8;
+      --shadow:       rgba(0,0,0,0.12);
+      --tab-inactive: rgba(0,0,0,0.04);
+      --day-inactive: rgba(0,0,0,0.04);
+      --sub-bg:       rgba(240,244,248,0.85);
+      --bar-track:    rgba(0,0,0,0.08);
+      --bar-track2:   rgba(0,0,0,0.06);
+      --bar-track3:   rgba(0,0,0,0.07);
+      --road-line:    rgba(0,0,0,0.12);
+      --exam-line-c:  rgba(0,0,0,0.10);
+      --modal-overlay:rgba(0,0,0,0.40);
+      --ph-inactive:  rgba(0,0,0,0.07);
+      --theme-transition: background .25s, color .25s, border-color .25s, box-shadow .25s;
+    }
+
+    * { box-sizing: border-box; transition: var(--theme-transition); }
+    body { font-family: 'Noto Sans Thai', 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 4px; }
+    .glass      { background: var(--glass-bg);   backdrop-filter: blur(12px); border: 1px solid var(--glass-border); }
+    .glass-dark { background: var(--glass-dark);  backdrop-filter: blur(12px); border: 1px solid var(--glass-border2); }
     .gradient-text { background: linear-gradient(135deg,#f472b6,#a78bfa,#60a5fa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
     .card-hover { transition: transform .2s, box-shadow .2s; cursor: pointer; }
-    .card-hover:hover { transform: translateY(-3px); box-shadow: 0 20px 40px rgba(0,0,0,.4); }
+    .card-hover:hover { transform: translateY(-3px); box-shadow: 0 20px 40px var(--shadow); }
     .slide-up { animation: slideUp .3s ease-out; }
     @keyframes slideUp { from { transform:translateY(16px); opacity:0; } to { transform:translateY(0); opacity:1; } }
     .pulse-ring { animation: pulseRing 2s infinite; }
@@ -33,45 +111,38 @@
     .day-btn:hover { transform: scale(1.05); }
     .badge-glow { box-shadow: 0 0 16px rgba(251,191,36,.5); }
 
+    /* ── Theme toggle pill ── */
+    .theme-toggle {
+      display: flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 20px; cursor: pointer;
+      font-size: 12px; font-weight: 700; border: none;
+      background: var(--row-bg); color: var(--text-muted);
+      border: 1px solid var(--card-border);
+      transition: all .2s;
+    }
+    .theme-toggle:hover { background: var(--pill-hover); }
+
     /* ── Roadmap styles ── */
     .road-phase { position: relative; }
     .road-phase::before {
-      content: '';
-      position: absolute;
-      left: 20px;
-      top: 48px;
-      bottom: -24px;
-      width: 2px;
-      background: linear-gradient(to bottom, rgba(255,255,255,0.15), transparent);
-      z-index: 0;
+      content: ''; position: absolute; left: 20px; top: 48px; bottom: -24px;
+      width: 2px; background: linear-gradient(to bottom, var(--road-line), transparent); z-index: 0;
     }
     .road-phase:last-child::before { display: none; }
     .phase-dot {
-      width: 40px; height: 40px;
-      border-radius: 50%;
+      width: 40px; height: 40px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
-      flex-shrink: 0;
-      position: relative; z-index: 1;
+      font-size: 16px; flex-shrink: 0; position: relative; z-index: 1;
     }
     .subject-pill {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px 12px;
-      border-radius: 10px;
-      font-size: 12px;
-      border: 1px solid rgba(255,255,255,0.07);
-      background: rgba(255,255,255,0.03);
-      transition: all .2s;
+      display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+      border-radius: 10px; font-size: 12px;
+      border: 1px solid var(--pill-border); background: var(--pill-bg); transition: all .2s;
     }
-    .subject-pill:hover { background: rgba(255,255,255,0.07); }
-    .exam-dot {
-      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-    }
-    .exam-line { width: 2px; height: 24px; margin-left: 4px; background: rgba(255,255,255,0.1); }
-    .cost-bar {
-      height: 8px; border-radius: 4px;
-      transition: width .6s ease;
-    }
+    .subject-pill:hover { background: var(--pill-hover); }
+    .exam-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .exam-line { width: 2px; height: 24px; margin-left: 4px; background: var(--exam-line-c); }
+    .cost-bar { height: 8px; border-radius: 4px; transition: width .6s ease; }
   </style>
 </head>
 <body>
@@ -253,7 +324,7 @@ const RoadmapTab = ({ isAdmin }) => {
 
   const totalCost = phases.reduce((a, p) => a + (p.subjects||[]).reduce((s2, sub) => s2 + (sub.free ? 0 : (sub.costNum||0)), 0), 0);
 
-  const inputCls = "bg-transparent border-b border-white/20 text-white text-xs outline-none py-1 w-full placeholder-white/30";
+  const inputCls = "text-xs outline-none py-1 w-full"; const inputStyle = {background:"transparent", borderBottom:"1px solid var(--divider)", color:"var(--text)"};
   const btnSave  = { background:'linear-gradient(135deg,#a78bfa,#f472b6)', color:'white' };
   const btnDel   = { background:'rgba(239,68,68,0.15)', color:'#f87171', border:'1px solid rgba(239,68,68,0.3)' };
 
@@ -331,8 +402,8 @@ const RoadmapTab = ({ isAdmin }) => {
                           <div key={si} className="subject-pill">
                             <span className="text-base">{s.icon}</span>
                             <div className="flex-1 min-w-0">
-                              <p className="font-bold text-white text-xs leading-tight">{s.name}</p>
-                              <p className="text-[10px] mt-0.5" style={{color:'rgba(255,255,255,0.4)'}}>{s.teacher} · {s.mode} · {s.day}</p>
+                              <p className="font-bold text-xs leading-tight" style={{color:'var(--text)'}}>{s.name}</p>
+                              <p className="text-[10px] mt-0.5" style={{color:'var(--text-muted)'}}>{s.teacher} · {s.mode} · {s.day}</p>
                             </div>
                             <span className="text-xs font-black shrink-0" style={{color:s.free?'#4ade80':phase.color}}>
                               {s.free ? 'มีแล้ว ✅' : `${(s.costNum||0).toLocaleString()} ฿`}
@@ -351,9 +422,9 @@ const RoadmapTab = ({ isAdmin }) => {
         {/* ── Right column ── */}
         <div className="space-y-4">
           {/* Exam timeline */}
-          <div className="glass rounded-2xl p-4" style={{border:'1px solid rgba(255,255,255,0.07)'}}>
+          <div className="glass rounded-2xl p-4" style={{border:'1px solid var(--card-border)'}}>
             <div className="flex justify-between items-center mb-4">
-              <p className="text-xs font-bold" style={{color:'rgba(255,255,255,0.4)'}}>📅 EXAM TIMELINE</p>
+              <p className="text-xs font-bold" style={{color:'var(--text-muted)'}}>📅 EXAM TIMELINE</p>
               {editMode && <button onClick={openExamEdit} className="px-2 py-1 rounded-lg text-xs font-bold" style={btnSave}>✏️</button>}
             </div>
             <div>
@@ -362,8 +433,8 @@ const RoadmapTab = ({ isAdmin }) => {
                   <div className="flex items-center gap-3">
                     <div className="exam-dot" style={{background:e.color, boxShadow:`0 0 6px ${e.color}88`}}/>
                     <div className="flex-1">
-                      <p className="text-[10px] font-bold" style={{color:'rgba(255,255,255,0.4)'}}>{e.month}</p>
-                      <p className="text-xs font-bold text-white leading-tight">{e.label}</p>
+                      <p className="text-[10px] font-bold" style={{color:'var(--text-muted)'}}>{e.month}</p>
+                      <p className="text-xs font-bold leading-tight" style={{color:'var(--text)'}}>{e.label}</p>
                     </div>
                   </div>
                   {ei < exams.length-1 && <div className="exam-line ml-1 my-1"/>}
@@ -373,8 +444,8 @@ const RoadmapTab = ({ isAdmin }) => {
           </div>
 
           {/* Budget bars */}
-          <div className="glass rounded-2xl p-4" style={{border:'1px solid rgba(255,255,255,0.07)'}}>
-            <p className="text-xs font-bold mb-3" style={{color:'rgba(255,255,255,0.4)'}}>💰 งบต่อเฟส</p>
+          <div className="glass rounded-2xl p-4" style={{border:'1px solid var(--card-border)'}}>
+            <p className="text-xs font-bold mb-3" style={{color:'var(--text-muted)'}}>💰 งบต่อเฟส</p>
             <div className="space-y-3">
               {phases.map(phase => {
                 const pc = (phase.subjects||[]).reduce((s,sub)=>s+(sub.free?0:(sub.costNum||0)),0);
@@ -382,28 +453,28 @@ const RoadmapTab = ({ isAdmin }) => {
                 return (
                   <div key={phase.id}>
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs text-white font-bold">{phase.label}</span>
+                      <span className="text-xs font-bold" style={{color:'var(--text)'}}>{phase.label}</span>
                       <span className="text-xs font-black" style={{color:phase.color}}>{pc.toLocaleString()} ฿</span>
                     </div>
-                    <div className="w-full h-2 rounded-full overflow-hidden" style={{background:'rgba(255,255,255,0.07)'}}>
+                    <div className="w-full h-2 rounded-full overflow-hidden" style={{background:'var(--bar-track3)'}}>
                       <div className="cost-bar" style={{width:`${barW}%`, background:`linear-gradient(90deg,${phase.color},${phase.color}88)`}}/>
                     </div>
                   </div>
                 );
               })}
-              <div className="pt-2 border-t" style={{borderColor:'rgba(255,255,255,0.08)'}}>
+              <div className="pt-2 border-t" style={{borderColor:'var(--divider)'}}>
                 <div className="flex justify-between">
-                  <span className="text-xs font-bold" style={{color:'rgba(255,255,255,0.5)'}}>รวมทั้งหมด</span>
-                  <span className="text-sm font-black text-white">{totalCost.toLocaleString()} ฿</span>
+                  <span className="text-xs font-bold" style={{color:'var(--text-muted)'}}>รวมทั้งหมด</span>
+                  <span className="text-sm font-black" style={{color:'var(--text)'}}>{totalCost.toLocaleString()} ฿</span>
                 </div>
-                <p className="text-[10px] mt-1" style={{color:'rgba(255,255,255,0.3)'}}>* ยังไม่รวมค่าหนังสือ ค่าเดินทาง Mock (~10,000–15,000 ฿)</p>
+                <p className="text-[10px] mt-1" style={{color:'var(--text-dim)'}}>* ยังไม่รวมค่าหนังสือ ค่าเดินทาง Mock (~10,000–15,000 ฿)</p>
               </div>
             </div>
           </div>
 
           {/* Feedback */}
-          <div className="glass rounded-2xl p-4" style={{border:'1px solid rgba(255,255,255,0.07)'}}>
-            <p className="text-xs font-bold mb-3" style={{color:'rgba(255,255,255,0.4)'}}>⭐ Feedback รวม</p>
+          <div className="glass rounded-2xl p-4" style={{border:'1px solid var(--card-border)'}}>
+            <p className="text-xs font-bold mb-3" style={{color:'var(--text-muted)'}}>⭐ Feedback รวม</p>
             {[
               { label:'ครูอุ๊ เคมี',     rating:5, note:'ยืนยาว 20+ ปี' },
               { label:'Dr. Ov อังกฤษ',   rating:4, note:'14 ปี ใจดี ครบ' },
@@ -411,10 +482,10 @@ const RoadmapTab = ({ isAdmin }) => {
               { label:'พี่วิเวียน ชีวะ',  rating:4, note:'สนุก ราคาคุ้ม' },
               { label:'พี่ปั้น เลข',      rating:3, note:'⚠️ ลองดูก่อน' },
             ].map(r=>(
-              <div key={r.label} className="flex items-center gap-2 py-1.5" style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-                <span className="text-xs text-white font-bold w-28 shrink-0">{r.label}</span>
-                <div className="flex gap-0.5">{[1,2,3,4,5].map(i=><span key={i} className="text-xs" style={{color:i<=r.rating?'#fbbf24':'rgba(255,255,255,0.15)'}}>★</span>)}</div>
-                <span className="text-[10px] ml-auto" style={{color:'rgba(255,255,255,0.35)'}}>{r.note}</span>
+              <div key={r.label} className="flex items-center gap-2 py-1.5" style={{borderBottom:'1px solid var(--divider)'}}>
+                <span className="text-xs font-bold w-28 shrink-0" style={{color:'var(--text)'}}>{r.label}</span>
+                <div className="flex gap-0.5">{[1,2,3,4,5].map(i=><span key={i} className="text-xs" style={{color:i<=r.rating?'#fbbf24':'var(--text-faint)'}}>★</span>)}</div>
+                <span className="text-[10px] ml-auto" style={{color:'var(--text-dim)'}}>{r.note}</span>
               </div>
             ))}
           </div>
@@ -428,14 +499,13 @@ const RoadmapTab = ({ isAdmin }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={()=>setEditPhaseId(null)}/>
           <div className="glass-dark rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col slide-up relative z-10 overflow-hidden"
-            style={{border:'1px solid rgba(255,255,255,0.12)'}}>
-            {/* Modal header */}
-            <div className="flex justify-between items-center px-5 py-4" style={{background:`${draftPhase.color}22`, borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
+            style={{border:'1px solid var(--glass-border)'}}>
+            <div className="flex justify-between items-center px-5 py-4" style={{background:`${draftPhase.color}22`, borderBottom:'1px solid var(--divider)'}}>
               <div>
-                <p className="text-sm font-black text-white">✏️ แก้ไข: {draftPhase.label}</p>
-                <p className="text-xs mt-0.5" style={{color:'rgba(255,255,255,0.4)'}}>แก้ไขข้อมูล phase และรายวิชา</p>
+                <p className="text-sm font-black" style={{color:'var(--text)'}}>✏️ แก้ไข: {draftPhase.label}</p>
+                <p className="text-xs mt-0.5" style={{color:'var(--text-muted)'}}>แก้ไขข้อมูล phase และรายวิชา</p>
               </div>
-              <button onClick={()=>setEditPhaseId(null)} className="text-white/40 hover:text-white text-lg px-2">✕</button>
+              <button onClick={()=>setEditPhaseId(null)} className="text-lg px-2" style={{color:'var(--text-muted)'}}>✕</button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
@@ -443,32 +513,32 @@ const RoadmapTab = ({ isAdmin }) => {
               <div className="rounded-xl p-4 space-y-3" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)'}}>
                 <p className="text-xs font-bold" style={{color:'rgba(255,255,255,0.4)'}}>ข้อมูล Phase</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><p className="text-[10px] mb-1" style={{color:'rgba(255,255,255,0.4)'}}>ชื่อ Phase</p><input className={inputCls} value={draftPhase.label} onChange={e=>setDraftPhase({...draftPhase,label:e.target.value})} placeholder="ม.5 เทอม 1"/></div>
-                  <div><p className="text-[10px] mb-1" style={{color:'rgba(255,255,255,0.4)'}}>ช่วงเวลา</p><input className={inputCls} value={draftPhase.period} onChange={e=>setDraftPhase({...draftPhase,period:e.target.value})} placeholder="มิ.ย. – ต.ค. 69"/></div>
-                  <div><p className="text-[10px] mb-1" style={{color:'rgba(255,255,255,0.4)'}}>Emoji</p><input className={inputCls} value={draftPhase.emoji} onChange={e=>setDraftPhase({...draftPhase,emoji:e.target.value})} placeholder="🌱"/></div>
-                  <div><p className="text-[10px] mb-1" style={{color:'rgba(255,255,255,0.4)'}}>สี (hex)</p><div className="flex items-center gap-2"><input type="color" value={draftPhase.color} onChange={e=>setDraftPhase({...draftPhase,color:e.target.value})} className="w-8 h-7 rounded cursor-pointer border-0 bg-transparent"/><input className={inputCls} value={draftPhase.color} onChange={e=>setDraftPhase({...draftPhase,color:e.target.value})}/></div></div>
+                  <div><p className="text-[10px] mb-1" style={{color:'rgba(255,255,255,0.4)'}}>ชื่อ Phase</p><input className={inputCls} style={inputStyle} value={draftPhase.label} onChange={e=>setDraftPhase({...draftPhase,label:e.target.value})} placeholder="ม.5 เทอม 1"/></div>
+                  <div><p className="text-[10px] mb-1" style={{color:'rgba(255,255,255,0.4)'}}>ช่วงเวลา</p><input className={inputCls} style={inputStyle} value={draftPhase.period} onChange={e=>setDraftPhase({...draftPhase,period:e.target.value})} placeholder="มิ.ย. – ต.ค. 69"/></div>
+                  <div><p className="text-[10px] mb-1" style={{color:'rgba(255,255,255,0.4)'}}>Emoji</p><input className={inputCls} style={inputStyle} value={draftPhase.emoji} onChange={e=>setDraftPhase({...draftPhase,emoji:e.target.value})} placeholder="🌱"/></div>
+                  <div><p className="text-[10px] mb-1" style={{color:'rgba(255,255,255,0.4)'}}>สี (hex)</p><div className="flex items-center gap-2"><input type="color" value={draftPhase.color} onChange={e=>setDraftPhase({...draftPhase,color:e.target.value})} className="w-8 h-7 rounded cursor-pointer border-0 bg-transparent"/><input className={inputCls} style={inputStyle} value={draftPhase.color} onChange={e=>setDraftPhase({...draftPhase,color:e.target.value})}/></div></div>
                 </div>
-                <div><p className="text-[10px] mb-1" style={{color:'rgba(255,255,255,0.4)'}}>เป้าหมาย (Goal)</p><input className={inputCls} value={draftPhase.goal} onChange={e=>setDraftPhase({...draftPhase,goal:e.target.value})} placeholder="เป้าหมายของ phase นี้"/></div>
+                <div><p className="text-[10px] mb-1" style={{color:'rgba(255,255,255,0.4)'}}>เป้าหมาย (Goal)</p><input className={inputCls} style={inputStyle} value={draftPhase.goal} onChange={e=>setDraftPhase({...draftPhase,goal:e.target.value})} placeholder="เป้าหมายของ phase นี้"/></div>
               </div>
 
               {/* Subjects list */}
               <div>
-                <p className="text-xs font-bold mb-3" style={{color:'rgba(255,255,255,0.4)'}}>รายวิชา ({(draftPhase.subjects||[]).length})</p>
+                <p className="text-xs font-bold mb-3" style={{color:'var(--text-muted)'}}>รายวิชา ({(draftPhase.subjects||[]).length})</p>
                 <div className="space-y-2">
                   {(draftPhase.subjects||[]).map((s,si)=>(
-                    <div key={si} className="rounded-xl p-3 space-y-2" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)'}}>
+                    <div key={si} className="rounded-xl p-3 space-y-2" style={{background:'var(--row-bg)',border:'1px solid var(--row-border)'}}>
                       <div className="grid grid-cols-2 gap-2">
-                        <div><p className="text-[10px] mb-0.5" style={{color:'rgba(255,255,255,0.35)'}}>Icon</p><input className={inputCls} value={s.icon} onChange={e=>updateDraftSubject(si,'icon',e.target.value)}/></div>
-                        <div><p className="text-[10px] mb-0.5" style={{color:'rgba(255,255,255,0.35)'}}>ชื่อวิชา</p><input className={inputCls} value={s.name} onChange={e=>updateDraftSubject(si,'name',e.target.value)}/></div>
-                        <div><p className="text-[10px] mb-0.5" style={{color:'rgba(255,255,255,0.35)'}}>ครู</p><input className={inputCls} value={s.teacher} onChange={e=>updateDraftSubject(si,'teacher',e.target.value)}/></div>
-                        <div><p className="text-[10px] mb-0.5" style={{color:'rgba(255,255,255,0.35)'}}>รูปแบบ</p><input className={inputCls} value={s.mode} onChange={e=>updateDraftSubject(si,'mode',e.target.value)}/></div>
-                        <div><p className="text-[10px] mb-0.5" style={{color:'rgba(255,255,255,0.35)'}}>วัน/เวลา</p><input className={inputCls} value={s.day} onChange={e=>updateDraftSubject(si,'day',e.target.value)}/></div>
-                        <div><p className="text-[10px] mb-0.5" style={{color:'rgba(255,255,255,0.35)'}}>ค่าใช้จ่าย (฿)</p><input type="number" className={inputCls} value={s.costNum} onChange={e=>updateDraftSubject(si,'costNum',e.target.value)}/></div>
+                        <div><p className="text-[10px] mb-0.5" style={{color:'var(--text-dim)'}}>Icon</p><input className={inputCls} style={inputStyle} value={s.icon} onChange={e=>updateDraftSubject(si,'icon',e.target.value)}/></div>
+                        <div><p className="text-[10px] mb-0.5" style={{color:'var(--text-dim)'}}>ชื่อวิชา</p><input className={inputCls} style={inputStyle} value={s.name} onChange={e=>updateDraftSubject(si,'name',e.target.value)}/></div>
+                        <div><p className="text-[10px] mb-0.5" style={{color:'var(--text-dim)'}}>ครู</p><input className={inputCls} style={inputStyle} value={s.teacher} onChange={e=>updateDraftSubject(si,'teacher',e.target.value)}/></div>
+                        <div><p className="text-[10px] mb-0.5" style={{color:'var(--text-dim)'}}>รูปแบบ</p><input className={inputCls} style={inputStyle} value={s.mode} onChange={e=>updateDraftSubject(si,'mode',e.target.value)}/></div>
+                        <div><p className="text-[10px] mb-0.5" style={{color:'var(--text-dim)'}}>วัน/เวลา</p><input className={inputCls} style={inputStyle} value={s.day} onChange={e=>updateDraftSubject(si,'day',e.target.value)}/></div>
+                        <div><p className="text-[10px] mb-0.5" style={{color:'var(--text-dim)'}}>ค่าใช้จ่าย (฿)</p><input type="number" className={inputCls} style={inputStyle} value={s.costNum} onChange={e=>updateDraftSubject(si,'costNum',e.target.value)}/></div>
                       </div>
                       <div className="flex items-center justify-between">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input type="checkbox" checked={!!s.free} onChange={e=>updateDraftSubject(si,'free',e.target.checked)} className="accent-purple-500"/>
-                          <span className="text-xs" style={{color:'rgba(255,255,255,0.5)'}}>มีแล้ว / ฟรี</span>
+                          <span className="text-xs" style={{color:'var(--text-muted)'}}>มีแล้ว / ฟรี</span>
                         </label>
                         <button onClick={()=>removeDraftSubject(si)} className="px-2 py-1 rounded-lg text-xs font-bold" style={btnDel}>ลบ</button>
                       </div>
@@ -480,17 +550,17 @@ const RoadmapTab = ({ isAdmin }) => {
                 <div className="mt-3 rounded-xl p-3 space-y-2" style={{background:'rgba(167,139,250,0.06)',border:'1px dashed rgba(167,139,250,0.3)'}}>
                   <p className="text-xs font-bold" style={{color:'rgba(167,139,250,0.8)'}}>+ เพิ่มวิชาใหม่</p>
                   <div className="grid grid-cols-2 gap-2">
-                    <div><p className="text-[10px] mb-0.5" style={{color:'rgba(255,255,255,0.35)'}}>Icon</p><input className={inputCls} value={newSubject.icon} onChange={e=>setNewSubject({...newSubject,icon:e.target.value})} placeholder="📚"/></div>
-                    <div><p className="text-[10px] mb-0.5" style={{color:'rgba(255,255,255,0.35)'}}>ชื่อวิชา</p><input className={inputCls} value={newSubject.name} onChange={e=>setNewSubject({...newSubject,name:e.target.value})} placeholder="ชื่อวิชา"/></div>
-                    <div><p className="text-[10px] mb-0.5" style={{color:'rgba(255,255,255,0.35)'}}>ครู</p><input className={inputCls} value={newSubject.teacher} onChange={e=>setNewSubject({...newSubject,teacher:e.target.value})} placeholder="ชื่อครู"/></div>
-                    <div><p className="text-[10px] mb-0.5" style={{color:'rgba(255,255,255,0.35)'}}>รูปแบบ</p><input className={inputCls} value={newSubject.mode} onChange={e=>setNewSubject({...newSubject,mode:e.target.value})} placeholder="Online / Onsite"/></div>
-                    <div><p className="text-[10px] mb-0.5" style={{color:'rgba(255,255,255,0.35)'}}>วัน/เวลา</p><input className={inputCls} value={newSubject.day} onChange={e=>setNewSubject({...newSubject,day:e.target.value})} placeholder="เสาร์ 09:30"/></div>
-                    <div><p className="text-[10px] mb-0.5" style={{color:'rgba(255,255,255,0.35)'}}>ค่าใช้จ่าย (฿)</p><input type="number" className={inputCls} value={newSubject.costNum} onChange={e=>setNewSubject({...newSubject,costNum:parseInt(e.target.value)||0})}/></div>
+                    <div><p className="text-[10px] mb-0.5" style={{color:'var(--text-dim)'}}>Icon</p><input className={inputCls} style={inputStyle} value={newSubject.icon} onChange={e=>setNewSubject({...newSubject,icon:e.target.value})} placeholder="📚"/></div>
+                    <div><p className="text-[10px] mb-0.5" style={{color:'var(--text-dim)'}}>ชื่อวิชา</p><input className={inputCls} style={inputStyle} value={newSubject.name} onChange={e=>setNewSubject({...newSubject,name:e.target.value})} placeholder="ชื่อวิชา"/></div>
+                    <div><p className="text-[10px] mb-0.5" style={{color:'var(--text-dim)'}}>ครู</p><input className={inputCls} style={inputStyle} value={newSubject.teacher} onChange={e=>setNewSubject({...newSubject,teacher:e.target.value})} placeholder="ชื่อครู"/></div>
+                    <div><p className="text-[10px] mb-0.5" style={{color:'var(--text-dim)'}}>รูปแบบ</p><input className={inputCls} style={inputStyle} value={newSubject.mode} onChange={e=>setNewSubject({...newSubject,mode:e.target.value})} placeholder="Online / Onsite"/></div>
+                    <div><p className="text-[10px] mb-0.5" style={{color:'var(--text-dim)'}}>วัน/เวลา</p><input className={inputCls} style={inputStyle} value={newSubject.day} onChange={e=>setNewSubject({...newSubject,day:e.target.value})} placeholder="เสาร์ 09:30"/></div>
+                    <div><p className="text-[10px] mb-0.5" style={{color:'var(--text-dim)'}}>ค่าใช้จ่าย (฿)</p><input type="number" className={inputCls} style={inputStyle} value={newSubject.costNum} onChange={e=>setNewSubject({...newSubject,costNum:parseInt(e.target.value)||0})}/></div>
                   </div>
                   <div className="flex items-center justify-between">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={newSubject.free} onChange={e=>setNewSubject({...newSubject,free:e.target.checked})} className="accent-purple-500"/>
-                      <span className="text-xs" style={{color:'rgba(255,255,255,0.5)'}}>มีแล้ว / ฟรี</span>
+                      <span className="text-xs" style={{color:'var(--text-muted)'}}>มีแล้ว / ฟรี</span>
                     </label>
                     <button onClick={addDraftSubject} className="px-3 py-1.5 rounded-lg text-xs font-bold" style={btnSave}>+ เพิ่ม</button>
                   </div>
@@ -521,14 +591,14 @@ const RoadmapTab = ({ isAdmin }) => {
             </div>
             <div className="flex-1 overflow-y-auto p-5 space-y-3">
               {draftExams.map((e,ei)=>(
-                <div key={ei} className="rounded-xl p-3" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)'}}>
+                <div key={ei} className="rounded-xl p-3" style={{background:'var(--row-bg)',border:'1px solid var(--row-border)'}}>
                   <div className="grid grid-cols-2 gap-2 mb-2">
-                    <div><p className="text-[10px] mb-0.5" style={{color:'rgba(255,255,255,0.35)'}}>เดือน/ปี</p><input className={inputCls} value={e.month} onChange={ev=>updateDraftExam(ei,'month',ev.target.value)} placeholder="ก.พ. 71"/></div>
-                    <div><p className="text-[10px] mb-0.5" style={{color:'rgba(255,255,255,0.35)'}}>รายการสอบ</p><input className={inputCls} value={e.label} onChange={ev=>updateDraftExam(ei,'label',ev.target.value)} placeholder="สอบ TPAT1"/></div>
+                    <div><p className="text-[10px] mb-0.5" style={{color:'var(--text-dim)'}}>เดือน/ปี</p><input className={inputCls} style={inputStyle} value={e.month} onChange={ev=>updateDraftExam(ei,'month',ev.target.value)} placeholder="ก.พ. 71"/></div>
+                    <div><p className="text-[10px] mb-0.5" style={{color:'var(--text-dim)'}}>รายการสอบ</p><input className={inputCls} style={inputStyle} value={e.label} onChange={ev=>updateDraftExam(ei,'label',ev.target.value)} placeholder="สอบ TPAT1"/></div>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <p className="text-[10px]" style={{color:'rgba(255,255,255,0.35)'}}>สี:</p>
+                      <p className="text-[10px]" style={{color:'var(--text-dim)'}}>สี:</p>
                       <input type="color" value={e.color} onChange={ev=>updateDraftExam(ei,'color',ev.target.value)} className="w-7 h-6 rounded cursor-pointer border-0 bg-transparent"/>
                     </div>
                     <button onClick={()=>removeDraftExam(ei)} className="px-2 py-1 rounded-lg text-xs font-bold" style={btnDel}>ลบ</button>
@@ -539,11 +609,11 @@ const RoadmapTab = ({ isAdmin }) => {
               <div className="rounded-xl p-3 space-y-2" style={{background:'rgba(167,139,250,0.06)',border:'1px dashed rgba(167,139,250,0.3)'}}>
                 <p className="text-xs font-bold" style={{color:'rgba(167,139,250,0.8)'}}>+ เพิ่มรายการ</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <input className={inputCls} value={newExam.month} onChange={e=>setNewExam({...newExam,month:e.target.value})} placeholder="เดือน/ปี"/>
-                  <input className={inputCls} value={newExam.label} onChange={e=>setNewExam({...newExam,label:e.target.value})} placeholder="ชื่อการสอบ"/>
+                  <input className={inputCls} style={inputStyle} value={newExam.month} onChange={e=>setNewExam({...newExam,month:e.target.value})} placeholder="เดือน/ปี"/>
+                  <input className={inputCls} style={inputStyle} value={newExam.label} onChange={e=>setNewExam({...newExam,label:e.target.value})} placeholder="ชื่อการสอบ"/>
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2"><p className="text-[10px]" style={{color:'rgba(255,255,255,0.35)'}}>สี:</p><input type="color" value={newExam.color} onChange={e=>setNewExam({...newExam,color:e.target.value})} className="w-7 h-6 rounded cursor-pointer border-0 bg-transparent"/></div>
+                  <div className="flex items-center gap-2"><p className="text-[10px]" style={{color:'var(--text-dim)'}}>สี:</p><input type="color" value={newExam.color} onChange={e=>setNewExam({...newExam,color:e.target.value})} className="w-7 h-6 rounded cursor-pointer border-0 bg-transparent"/></div>
                   <button onClick={addDraftExam} className="px-3 py-1.5 rounded-lg text-xs font-bold" style={btnSave}>+ เพิ่ม</button>
                 </div>
               </div>
@@ -568,11 +638,11 @@ const ProgressRing = ({ pct, size=56, stroke=5, color='#a78bfa' }) => {
   const offset = circ - (pct/100)*circ;
   return (
     <svg width={size} height={size}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={stroke} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--bar-track)" strokeWidth={stroke} />
       <circle className="progress-ring-circle" cx={size/2} cy={size/2} r={r} fill="none"
         stroke={color} strokeWidth={stroke} strokeLinecap="round"
         strokeDasharray={circ} strokeDashoffset={offset} />
-      <text x="50%" y="50%" textAnchor="middle" dy=".35em" fontSize={size*0.22} fill="white" fontWeight="700">{pct}%</text>
+      <text x="50%" y="50%" textAnchor="middle" dy=".35em" fontSize={size*0.22} fill="var(--text)" fontWeight="700">{pct}%</text>
     </svg>
   );
 };
@@ -595,8 +665,8 @@ const MiniChart = ({ history, target, color }) => {
       <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round"/>
       {history.map((e,i)=>(
         <g key={i}>
-          <circle cx={P+i*xS} cy={yOf(e.score)} r="3" fill={color} stroke="#0f0f1a" strokeWidth="1.5"/>
-          <text x={P+i*xS} y={yOf(e.score)-7} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.6)">{e.score}</text>
+          <circle cx={P+i*xS} cy={yOf(e.score)} r="3" fill={color} stroke="var(--bg)" strokeWidth="1.5"/>
+          <text x={P+i*xS} y={yOf(e.score)-7} textAnchor="middle" fontSize="9" fill="var(--text-muted)">{e.score}</text>
         </g>
       ))}
     </svg>
@@ -616,30 +686,30 @@ const SubjectModal = ({ subject, onClose, onUpdateTopic, onAddCustomTopic, onDel
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}/>
-      <div className="glass-dark rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col slide-up overflow-hidden relative z-10" style={{border:'1px solid rgba(255,255,255,0.12)'}}>
+      <div className="glass-dark rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col slide-up overflow-hidden relative z-10" style={{border:'1px solid var(--glass-border)'}}>
         <div className="p-5 flex justify-between items-center" style={{background:`linear-gradient(135deg,${col.from}22,${col.to}11)`}}>
           <div>
-            <h2 className="text-xl font-bold text-white">{subject.name}</h2>
+            <h2 className="text-xl font-bold" style={{color:'var(--text)'}}>{subject.name}</h2>
             <p className="text-xs mt-0.5" style={{color:col.text}}>น้ำหนัก {subject.weight}% • คะแนนล่าสุด {latest}/100</p>
           </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-all">✕</button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 transition-all" style={{color:'var(--text-muted)'}}>✕</button>
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          <div className="rounded-xl p-4" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)'}}>
-            <p className="text-xs font-bold mb-3" style={{color:'rgba(255,255,255,0.4)'}}>MOCK TEST TREND</p>
+          <div className="rounded-xl p-4" style={{background:'var(--row-bg)',border:'1px solid var(--row-border)'}}>
+            <p className="text-xs font-bold mb-3" style={{color:'var(--text-muted)'}}>MOCK TEST TREND</p>
             <MiniChart history={subject.scoreHistory} target={subject.targetScore} color={col.from}/>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl p-4" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)'}}>
-              <p className="text-xs font-bold mb-2" style={{color:'rgba(255,255,255,0.4)'}}>🎯 เป้าหมาย</p>
+            <div className="rounded-xl p-4" style={{background:'var(--row-bg)',border:'1px solid var(--row-border)'}}>
+              <p className="text-xs font-bold mb-2" style={{color:'var(--text-muted)'}}>🎯 เป้าหมาย</p>
               <input type="number" value={subject.targetScore||''} onChange={e=>onUpdateTarget(subject.id,e.target.value)}
-                className="w-full bg-transparent text-xl font-bold text-white outline-none border-b border-white/20 pb-1" placeholder="0-100"/>
+                className="w-full bg-transparent text-xl font-bold outline-none border-b pb-1" style={{color:'var(--text)',borderColor:'var(--divider)'}} placeholder="0-100"/>
             </div>
-            <div className="rounded-xl p-4" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)'}}>
-              <p className="text-xs font-bold mb-2" style={{color:'rgba(255,255,255,0.4)'}}>📝 เพิ่มคะแนน Mock</p>
+            <div className="rounded-xl p-4" style={{background:'var(--row-bg)',border:'1px solid var(--row-border)'}}>
+              <p className="text-xs font-bold mb-2" style={{color:'var(--text-muted)'}}>📝 เพิ่มคะแนน Mock</p>
               <div className="flex gap-2">
                 <input type="number" value={newScore} onChange={e=>setNewScore(e.target.value)}
-                  className="flex-1 bg-transparent text-xl font-bold text-white outline-none border-b border-white/20 pb-1" placeholder="0-100"/>
+                  className="flex-1 bg-transparent text-xl font-bold outline-none border-b pb-1" style={{color:'var(--text)',borderColor:'var(--divider)'}} placeholder="0-100"/>
                 <button onClick={()=>{if(newScore){onAddScore(subject.id,parseInt(newScore));setNewScore('');}}}
                   className="px-3 py-1 rounded-lg text-xs font-bold text-white transition-all"
                   style={{background:`linear-gradient(135deg,${col.from},${col.to})`}}>บันทึก</button>
@@ -647,20 +717,20 @@ const SubjectModal = ({ subject, onClose, onUpdateTopic, onAddCustomTopic, onDel
             </div>
           </div>
           <div>
-            <p className="text-xs font-bold mb-3" style={{color:'rgba(255,255,255,0.4)'}}>CONTENT CHECKLIST</p>
+            <p className="text-xs font-bold mb-3" style={{color:'var(--text-muted)'}}>CONTENT CHECKLIST</p>
             <div className="flex gap-2 mb-4">
               <input type="text" value={customTopic} onChange={e=>setCustomTopic(e.target.value)} placeholder="เพิ่มหัวข้อเรียน..."
-                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/30 transition-all"/>
+                className="flex-1 border rounded-lg px-3 py-2 text-sm outline-none transition-all" style={{background:'var(--input-bg)',border:'1px solid var(--input-border)',color:'var(--text)'}}/>
               <button onClick={()=>{if(customTopic.trim()){onAddCustomTopic(subject.id,customTopic.trim());setCustomTopic('');}}}
                 className="px-4 py-2 rounded-lg text-sm font-bold text-white" style={{background:`linear-gradient(135deg,${col.from},${col.to})`}}>+ เพิ่ม</button>
             </div>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {(subject.topics||[]).map((t,idx)=>(
                 <div key={idx} className="flex items-center gap-3 p-3 rounded-lg transition-all group"
-                  style={{background: t.completed ? `${col.from}18` : 'rgba(255,255,255,0.03)', border:`1px solid ${t.completed ? col.from+'40' : 'rgba(255,255,255,0.06)'}`}}>
+                  style={{background: t.completed ? `${col.from}18` : 'var(--row-bg)', border:`1px solid ${t.completed ? col.from+'40' : 'var(--row-border)'}`}}>
                   <input type="checkbox" checked={t.completed} onChange={()=>onUpdateTopic(subject.id,idx)}
                     className="h-4 w-4 rounded accent-purple-500 cursor-pointer"/>
-                  <span className={`flex-1 text-sm ${t.completed ? 'line-through' : ''}`} style={{color: t.completed ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.85)'}}>{t.name}</span>
+                  <span className={`flex-1 text-sm ${t.completed ? 'line-through' : ''}`} style={{color: t.completed ? 'var(--text-dim)' : 'var(--text)'}}>{t.name}</span>
                   <button onClick={()=>onDeleteCustomTopic(subject.id,idx)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all text-xs">✕</button>
                 </div>
               ))}
@@ -698,6 +768,15 @@ const App = () => {
   const [activeTab, setActiveTab] = React.useState('dashboard');
   const [newFamU, setNewFamU] = React.useState('');
   const [newFamP, setNewFamP] = React.useState('');
+
+  // ── Theme (must be before any early returns) ──
+  const [dark, setDark] = React.useState(() => {
+    try { const s = localStorage.getItem('med71_theme'); return s ? s === 'dark' : true; } catch(e) { return true; }
+  });
+  React.useEffect(() => {
+    document.body.classList.toggle('light', !dark);
+    try { localStorage.setItem('med71_theme', dark ? 'dark' : 'light'); } catch(e) {}
+  }, [dark]);
 
   const selectedSubject = selectedSubjectId ? subjects.find(s=>s.id===selectedSubjectId) : null;
 
@@ -813,39 +892,44 @@ const App = () => {
 
   const isAdmin = currentSession?.role==='admin';
 
-  // ── Tab definitions: เพิ่ม roadmap ──
+  // ── Tab definitions ──
   const TABS_DESKTOP = [['dashboard','📊 Overview'],['analytics','📈 Analytics'],['weekly','📅 Weekly'],['roadmap','🗺️ Roadmap'],['logs','📋 Logs']];
   const TABS_MOBILE  = [['dashboard','📊'],['analytics','📈'],['weekly','📅'],['roadmap','🗺️'],['logs','📋']];
 
   return (
-    <div className="min-h-screen" style={{background:'#0f0f1a'}}>
+    <div className="min-h-screen" style={{background:'var(--bg)'}}>
       {toast && <div className={`toast rounded-xl px-4 py-3 text-sm font-bold text-white shadow-2xl ${toast.type==='error'?'bg-red-600':'bg-emerald-600'}`}>{toast.msg}</div>}
 
       {/* Top Nav */}
-      <nav className="sticky top-0 z-40 flex items-center justify-between px-4 py-3" style={{background:'rgba(15,15,26,0.85)',backdropFilter:'blur(16px)',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+      <nav className="sticky top-0 z-40 flex items-center justify-between px-4 py-3" style={{background:'var(--nav-bg)',backdropFilter:'blur(16px)',borderBottom:'1px solid var(--nav-border)'}}>
         <div className="flex items-center gap-3"><span className="text-lg">🎓</span><span className="font-black text-sm gradient-text">MED71</span></div>
-        <div className="hidden md:flex gap-1 rounded-xl p-1" style={{background:'rgba(255,255,255,0.05)'}}>
+        <div className="hidden md:flex gap-1 rounded-xl p-1" style={{background:'var(--tab-inactive)'}}>
           {TABS_DESKTOP.map(([key,label])=>(
             <button key={key} onClick={()=>setActiveTab(key)} className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-              style={activeTab===key?{background:'linear-gradient(135deg,#f472b6,#a78bfa)',color:'white'}:{color:'rgba(255,255,255,0.4)'}}>
+              style={activeTab===key?{background:'linear-gradient(135deg,#f472b6,#a78bfa)',color:'white'}:{color:'var(--text-muted)'}}>
               {label}
             </button>
           ))}
         </div>
         <div className="flex items-center gap-2">
+          {/* Theme toggle */}
+          <button onClick={()=>setDark(d=>!d)} className="theme-toggle" title={dark?'เปลี่ยนเป็น Light Mode':'เปลี่ยนเป็น Dark Mode'}>
+            {dark ? '☀️' : '🌙'}
+            <span className="hidden sm:inline">{dark ? 'Light' : 'Dark'}</span>
+          </button>
           {isAdmin && <button onClick={()=>setShowAdminPanel(!showAdminPanel)} className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{background:'rgba(99,102,241,0.2)',color:'#a5b4fc',border:'1px solid rgba(99,102,241,0.3)'}}>⚙️ Admin</button>}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{background:'rgba(255,255,255,0.05)'}}>
-            <span className="text-xs font-bold" style={{color:'rgba(255,255,255,0.6)'}}>{currentSession?.name}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{background:'var(--row-bg)',border:'1px solid var(--card-border)'}}>
+            <span className="text-xs font-bold" style={{color:'var(--text-muted)'}}>{currentSession?.name}</span>
             <button onClick={()=>{localStorage.removeItem('med71_session');setCurrentSession(null);setAuthMode('login');setSelectedSubjectId(null);}} className="text-xs text-red-400 hover:text-red-300">ออก</button>
           </div>
         </div>
       </nav>
 
       {/* Mobile tabs */}
-      <div className="md:hidden flex gap-1 px-3 py-2 overflow-x-auto" style={{background:'rgba(15,15,26,0.9)',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+      <div className="md:hidden flex gap-1 px-3 py-2 overflow-x-auto" style={{background:'var(--nav-bg)',borderBottom:'1px solid var(--nav-border)'}}>
         {TABS_MOBILE.map(([key,label])=>(
           <button key={key} onClick={()=>setActiveTab(key)} className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-            style={activeTab===key?{background:'linear-gradient(135deg,#f472b6,#a78bfa)',color:'white'}:{color:'rgba(255,255,255,0.4)',background:'rgba(255,255,255,0.04)'}}>
+            style={activeTab===key?{background:'linear-gradient(135deg,#f472b6,#a78bfa)',color:'white'}:{color:'var(--text-muted)',background:'var(--tab-inactive)'}}>
             {label}
           </button>
         ))}
@@ -857,14 +941,14 @@ const App = () => {
           <div className="glass rounded-2xl p-5 mb-6 slide-up">
             <h3 className="text-sm font-bold mb-4" style={{color:'#a5b4fc'}}>👥 จัดการบัญชีผู้ใช้</h3>
             <form onSubmit={async e=>{e.preventDefault();const u=newFamU.trim(),p=newFamP.trim();if(!u||!p)return;if(familyAccounts.some(a=>a.username===u)){alert('ซ้ำ');return;}const updated=[...familyAccounts,{username:u,password:p}];setFamilyAccounts(updated);setNewFamU('');setNewFamP('');try{await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('family_accounts').set({accounts:updated});}catch(e){}}} className="flex gap-3 mb-4 flex-wrap">
-              <input value={newFamU} onChange={e=>setNewFamU(e.target.value)} placeholder="Username" required className="flex-1 min-w-32 rounded-xl px-3 py-2 text-sm text-white outline-none" style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)'}}/>
-              <input value={newFamP} onChange={e=>setNewFamP(e.target.value)} placeholder="Password" required className="flex-1 min-w-32 rounded-xl px-3 py-2 text-sm text-white outline-none" style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)'}}/>
+              <input value={newFamU} onChange={e=>setNewFamU(e.target.value)} placeholder="Username" required className="flex-1 min-w-32 rounded-xl px-3 py-2 text-sm outline-none" style={{background:'var(--input-bg)',border:'1px solid var(--input-border)',color:'var(--text)'}}/>
+              <input value={newFamP} onChange={e=>setNewFamP(e.target.value)} placeholder="Password" required className="flex-1 min-w-32 rounded-xl px-3 py-2 text-sm outline-none" style={{background:'var(--input-bg)',border:'1px solid var(--input-border)',color:'var(--text)'}}/>
               <button type="submit" className="px-4 py-2 rounded-xl text-sm font-bold text-white" style={{background:'linear-gradient(135deg,#6366f1,#8b5cf6)'}}>+ เพิ่ม</button>
             </form>
             <div className="space-y-2">
               {familyAccounts.map((acc,i)=>(
-                <div key={i} className="flex justify-between items-center px-4 py-2.5 rounded-xl text-sm" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)'}}>
-                  <span className="text-white font-bold">{acc.username} <span className="font-normal" style={{color:'rgba(255,255,255,0.4)'}}>/ {acc.password}</span></span>
+                <div key={i} className="flex justify-between items-center px-4 py-2.5 rounded-xl text-sm" style={{background:'var(--row-bg)',border:'1px solid var(--row-border)'}}>
+                  <span className="font-bold" style={{color:'var(--text)'}}>{acc.username} <span className="font-normal" style={{color:'var(--text-muted)'}}>/ {acc.password}</span></span>
                   <button onClick={async()=>{const up=familyAccounts.filter(a=>a.username!==acc.username);setFamilyAccounts(up);try{await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('dek71_data').doc('family_accounts').set({accounts:up});}catch(e){}}} className="text-red-400 text-xs hover:text-red-300">ลบ</button>
                 </div>
               ))}
@@ -877,28 +961,28 @@ const App = () => {
           <div className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="glass rounded-2xl p-4 flex flex-col gap-2" style={{border:'1px solid rgba(251,191,36,0.2)',background:'rgba(251,191,36,0.05)'}}>
-                <div className="flex items-center justify-between"><span className="text-xs font-bold" style={{color:'rgba(251,191,36,0.7)'}}>🔥 STREAK</span>{streak.current>=3&&<span className="pulse-ring rounded-full w-2 h-2 bg-yellow-400"/>}</div>
-                <div className="text-4xl font-black text-white">{streak.current}<span className="text-sm font-normal ml-1" style={{color:'rgba(255,255,255,0.4)'}}>วัน</span></div>
-                <div className="text-xs" style={{color:'rgba(255,255,255,0.4)'}}>สูงสุด {streak.longest||0} วัน</div>
+                <div className="flex items-center justify-between"><span className="text-xs font-bold" style={{color:'rgba(251,191,36,0.8)'}}>🔥 STREAK</span>{streak.current>=3&&<span className="pulse-ring rounded-full w-2 h-2 bg-yellow-400"/>}</div>
+                <div className="text-4xl font-black" style={{color:'var(--text)'}}>{streak.current}<span className="text-sm font-normal ml-1" style={{color:'var(--text-muted)'}}>วัน</span></div>
+                <div className="text-xs" style={{color:'var(--text-muted)'}}>สูงสุด {streak.longest||0} วัน</div>
               </div>
               <div className="glass rounded-2xl p-4 flex flex-col gap-2" style={{border:'1px solid rgba(167,139,250,0.2)',background:'rgba(167,139,250,0.05)'}}>
-                <span className="text-xs font-bold" style={{color:'rgba(167,139,250,0.7)'}}>⚖️ คะแนน กสพท.</span>
-                <div className="text-4xl font-black text-white">{weightedScore.toFixed(1)}<span className="text-sm font-normal ml-1" style={{color:'rgba(255,255,255,0.4)'}}>/100</span></div>
-                <div className="w-full rounded-full h-1.5 overflow-hidden" style={{background:'rgba(255,255,255,0.08)'}}><div className="h-full rounded-full transition-all" style={{width:`${Math.min(weightedScore,100)}%`,background:'linear-gradient(90deg,#a78bfa,#f472b6)'}}/></div>
+                <span className="text-xs font-bold" style={{color:'rgba(167,139,250,0.9)'}}>⚖️ คะแนน กสพท.</span>
+                <div className="text-4xl font-black" style={{color:'var(--text)'}}>{weightedScore.toFixed(1)}<span className="text-sm font-normal ml-1" style={{color:'var(--text-muted)'}}>/100</span></div>
+                <div className="w-full rounded-full h-1.5 overflow-hidden" style={{background:'var(--bar-track)'}}><div className="h-full rounded-full transition-all" style={{width:`${Math.min(weightedScore,100)}%`,background:'linear-gradient(90deg,#a78bfa,#f472b6)'}}/></div>
               </div>
               <div className="glass rounded-2xl p-4 flex flex-col gap-2" style={{border:'1px solid rgba(34,197,94,0.2)',background:'rgba(34,197,94,0.05)'}}>
-                <span className="text-xs font-bold" style={{color:'rgba(34,197,94,0.7)'}}>📚 เนื้อหาครบ</span>
-                <div className="text-4xl font-black text-white">{avgProgress.toFixed(0)}<span className="text-sm font-normal ml-1" style={{color:'rgba(255,255,255,0.4)'}}>%</span></div>
-                <div className="w-full rounded-full h-1.5 overflow-hidden" style={{background:'rgba(255,255,255,0.08)'}}><div className="h-full rounded-full transition-all" style={{width:`${avgProgress}%`,background:'linear-gradient(90deg,#22c55e,#10b981)'}}/></div>
+                <span className="text-xs font-bold" style={{color:'rgba(34,197,94,0.9)'}}>📚 เนื้อหาครบ</span>
+                <div className="text-4xl font-black" style={{color:'var(--text)'}}>{avgProgress.toFixed(0)}<span className="text-sm font-normal ml-1" style={{color:'var(--text-muted)'}}>%</span></div>
+                <div className="w-full rounded-full h-1.5 overflow-hidden" style={{background:'var(--bar-track)'}}><div className="h-full rounded-full transition-all" style={{width:`${avgProgress}%`,background:'linear-gradient(90deg,#22c55e,#10b981)'}}/></div>
               </div>
               <div className="glass rounded-2xl p-4 flex flex-col gap-2" style={{border:'1px solid rgba(96,165,250,0.2)',background:'rgba(96,165,250,0.05)'}}>
-                <span className="text-xs font-bold" style={{color:'rgba(96,165,250,0.7)'}}>🏅 BADGES</span>
-                <div className="text-4xl font-black text-white">{earnedBadges.length}<span className="text-sm font-normal ml-1" style={{color:'rgba(255,255,255,0.4)'}}>/{BADGES.length}</span></div>
+                <span className="text-xs font-bold" style={{color:'rgba(96,165,250,0.9)'}}>🏅 BADGES</span>
+                <div className="text-4xl font-black" style={{color:'var(--text)'}}>{earnedBadges.length}<span className="text-sm font-normal ml-1" style={{color:'var(--text-muted)'}}>/{BADGES.length}</span></div>
                 <div className="flex gap-1 flex-wrap">{BADGES.map(b=>(<span key={b.id} className="text-lg" style={{opacity:earnedBadges.find(x=>x.id===b.id)?1:0.15}} title={b.label}>{b.emoji}</span>))}</div>
               </div>
             </div>
             <div>
-              <h2 className="text-xs font-bold mb-3" style={{color:'rgba(255,255,255,0.4)'}}>วิชาทั้งหมด — คลิกเพื่อจัดการ</h2>
+              <h2 className="text-xs font-bold mb-3" style={{color:'var(--text-muted)'}}>วิชาทั้งหมด — คลิกเพื่อจัดการ</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {subjects.map(sub=>{
                   const col=SUB_COLORS[sub.id]||SUB_COLORS.soc;
@@ -906,20 +990,20 @@ const App = () => {
                   const prev=sub.scoreHistory?.length>1?sub.scoreHistory[sub.scoreHistory.length-2].score:null;
                   const trend=latest!==null&&prev!==null?(latest>prev?'↑':latest<prev?'↓':'→'):'';
                   return (
-                    <div key={sub.id} onClick={()=>setSelectedSubjectId(sub.id)} className="card-hover rounded-2xl overflow-hidden" style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)'}}>
+                    <div key={sub.id} onClick={()=>setSelectedSubjectId(sub.id)} className="card-hover rounded-2xl overflow-hidden" style={{background:'var(--card-bg)',border:'1px solid var(--card-border)'}}>
                       <div className="h-1.5" style={{background:`linear-gradient(90deg,${col.from},${col.to})`}}/>
                       <div className="p-4">
                         <div className="flex justify-between items-start mb-3">
                           <ProgressRing pct={sub.progress} size={48} stroke={4} color={col.from}/>
                           <div className="text-right">
-                            {latest!==null?<div className="text-xl font-black text-white">{latest}<span className="text-xs font-normal ml-0.5" style={{color:'rgba(255,255,255,0.4)'}}>/100</span></div>:<div className="text-xs mt-2" style={{color:'rgba(255,255,255,0.3)'}}>ยังไม่มีคะแนน</div>}
+                            {latest!==null?<div className="text-xl font-black" style={{color:'var(--text)'}}>{latest}<span className="text-xs font-normal ml-0.5" style={{color:'var(--text-muted)'}}>/100</span></div>:<div className="text-xs mt-2" style={{color:'var(--text-dim)'}}>ยังไม่มีคะแนน</div>}
                             {trend&&<div className="text-sm font-bold" style={{color:trend==='↑'?'#4ade80':trend==='↓'?'#f87171':'#94a3b8'}}>{trend}</div>}
                           </div>
                         </div>
-                        <p className="text-xs font-bold text-white leading-tight mb-1">{sub.name}</p>
-                        <p className="text-xs" style={{color:'rgba(255,255,255,0.3)'}}>น้ำหนัก {sub.weight}%</p>
-                        <div className="mt-2.5 flex items-center gap-1.5">
-                          <div className="flex-1 h-1 rounded-full overflow-hidden" style={{background:'rgba(255,255,255,0.08)'}}><div className="h-full rounded-full" style={{width:`${sub.progress}%`,background:`linear-gradient(90deg,${col.from},${col.to})`}}/></div>
+                        <p className="text-xs font-bold leading-tight mb-1" style={{color:'var(--text)'}}>{sub.name}</p>
+                        <p className="text-xs" style={{color:'var(--text-dim)'}}>น้ำหนัก {sub.weight}%</p>
+                        <div className="mt-2.5">
+                          <div className="h-1 rounded-full overflow-hidden" style={{background:'var(--bar-track)'}}><div className="h-full rounded-full" style={{width:`${sub.progress}%`,background:`linear-gradient(90deg,${col.from},${col.to})`}}/></div>
                         </div>
                       </div>
                     </div>
@@ -928,9 +1012,9 @@ const App = () => {
               </div>
             </div>
             <div>
-              <h2 className="text-xs font-bold mb-3" style={{color:'rgba(255,255,255,0.4)'}}>ACHIEVEMENTS</h2>
+              <h2 className="text-xs font-bold mb-3" style={{color:'var(--text-muted)'}}>ACHIEVEMENTS</h2>
               <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                {BADGES.map(b=>{const earned=!!earnedBadges.find(x=>x.id===b.id);return(<div key={b.id} className="glass rounded-xl p-3 text-center transition-all" style={{opacity:earned?1:0.35,border:earned?'1px solid rgba(251,191,36,0.3)':'1px solid rgba(255,255,255,0.05)',background:earned?'rgba(251,191,36,0.08)':'rgba(255,255,255,0.02)'}}><div className={`text-2xl mb-1 ${earned?'badge-glow':''}`}>{b.emoji}</div><p className="text-xs font-bold text-white">{b.label}</p><p className="text-[10px] mt-0.5" style={{color:'rgba(255,255,255,0.4)'}}>{b.desc}</p></div>);})}
+                {BADGES.map(b=>{const earned=!!earnedBadges.find(x=>x.id===b.id);return(<div key={b.id} className="glass rounded-xl p-3 text-center transition-all" style={{opacity:earned?1:0.35,border:earned?'1px solid rgba(251,191,36,0.3)':'1px solid var(--card-border)',background:earned?'rgba(251,191,36,0.08)':'var(--card-bg)'}}><div className={`text-2xl mb-1 ${earned?'badge-glow':''}`}>{b.emoji}</div><p className="text-xs font-bold" style={{color:'var(--text)'}}>{b.label}</p><p className="text-[10px] mt-0.5" style={{color:'var(--text-muted)'}}>{b.desc}</p></div>);})}
               </div>
             </div>
           </div>
@@ -939,17 +1023,17 @@ const App = () => {
         {/* ══════════ ANALYTICS ══════════ */}
         {activeTab==='analytics' && (
           <div className="space-y-6">
-            <h2 className="text-xs font-bold" style={{color:'rgba(255,255,255,0.4)'}}>MOCK TEST ANALYTICS — เปรียบเทียบทุกวิชา</h2>
+            <h2 className="text-xs font-bold" style={{color:'var(--text-muted)'}}>MOCK TEST ANALYTICS — เปรียบเทียบทุกวิชา</h2>
             <div className="glass rounded-2xl p-5">
-              <p className="text-xs font-bold mb-4" style={{color:'rgba(255,255,255,0.4)'}}>คะแนน Mock ล่าสุด vs เป้าหมาย</p>
+              <p className="text-xs font-bold mb-4" style={{color:'var(--text-muted)'}}>คะแนน Mock ล่าสุด vs เป้าหมาย</p>
               <div className="space-y-3">
-                {subjects.map(sub=>{const col=SUB_COLORS[sub.id]||SUB_COLORS.soc;const latest=sub.scoreHistory?.length?sub.scoreHistory[sub.scoreHistory.length-1].score:0;const target=sub.targetScore||0;const pct=Math.min(latest,100);const tpct=Math.min(target,100);return(<div key={sub.id}><div className="flex justify-between items-center mb-1"><span className="text-xs font-bold text-white">{sub.name}</span><span className="text-xs font-bold" style={{color:latest>=target?'#4ade80':'rgba(255,255,255,0.5)'}}>{latest} <span style={{color:'rgba(255,255,255,0.3)'}}>/ {target}</span></span></div><div className="relative h-5 rounded-full overflow-hidden" style={{background:'rgba(255,255,255,0.06)'}}><div className="absolute top-0 left-0 h-full rounded-full transition-all" style={{width:`${pct}%`,background:`linear-gradient(90deg,${col.from},${col.to})`}}/><div className="absolute top-0 h-full w-0.5 bg-white/30" style={{left:`${tpct}%`}}/></div></div>);})}
+                {subjects.map(sub=>{const col=SUB_COLORS[sub.id]||SUB_COLORS.soc;const latest=sub.scoreHistory?.length?sub.scoreHistory[sub.scoreHistory.length-1].score:0;const target=sub.targetScore||0;const pct=Math.min(latest,100);const tpct=Math.min(target,100);return(<div key={sub.id}><div className="flex justify-between items-center mb-1"><span className="text-xs font-bold" style={{color:'var(--text)'}}>{sub.name}</span><span className="text-xs font-bold" style={{color:latest>=target?'#4ade80':'var(--text-muted)'}}>{latest} <span style={{color:'var(--text-dim)'}}>/ {target}</span></span></div><div className="relative h-5 rounded-full overflow-hidden" style={{background:'var(--bar-track2)'}}><div className="absolute top-0 left-0 h-full rounded-full transition-all" style={{width:`${pct}%`,background:`linear-gradient(90deg,${col.from},${col.to})`}}/><div className="absolute top-0 h-full w-0.5" style={{left:`${tpct}%`,background:'var(--text-faint)'}}/></div></div>);})}
               </div>
-              <p className="text-xs mt-3" style={{color:'rgba(255,255,255,0.3)'}}>เส้นสีขาวแนวตั้ง = เป้าหมาย</p>
+              <p className="text-xs mt-3" style={{color:'var(--text-dim)'}}>เส้นแนวตั้ง = เป้าหมาย</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {subjects.filter(s=>s.scoreHistory?.length>0).map(sub=>{const col=SUB_COLORS[sub.id]||SUB_COLORS.soc;return(<div key={sub.id} className="glass rounded-2xl p-4"><div className="flex justify-between items-center mb-3"><p className="text-sm font-bold text-white">{sub.name}</p><span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{background:`${col.from}33`,color:col.from}}>{sub.scoreHistory.length} ครั้ง</span></div><MiniChart history={sub.scoreHistory} target={sub.targetScore} color={col.from}/></div>);})}
-              {subjects.every(s=>!s.scoreHistory?.length)&&(<div className="col-span-2 text-center py-16" style={{color:'rgba(255,255,255,0.3)'}}><div className="text-5xl mb-3">📊</div><p>ยังไม่มีข้อมูล Mock Test กรุณากดที่วิชาและบันทึกคะแนนก่อน</p></div>)}
+              {subjects.filter(s=>s.scoreHistory?.length>0).map(sub=>{const col=SUB_COLORS[sub.id]||SUB_COLORS.soc;return(<div key={sub.id} className="glass rounded-2xl p-4"><div className="flex justify-between items-center mb-3"><p className="text-sm font-bold" style={{color:'var(--text)'}}>{sub.name}</p><span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{background:`${col.from}33`,color:col.from}}>{sub.scoreHistory.length} ครั้ง</span></div><MiniChart history={sub.scoreHistory} target={sub.targetScore} color={col.from}/></div>);})}
+              {subjects.every(s=>!s.scoreHistory?.length)&&(<div className="col-span-2 text-center py-16" style={{color:'var(--text-dim)'}}><div className="text-5xl mb-3">📊</div><p>ยังไม่มีข้อมูล Mock Test กรุณากดที่วิชาและบันทึกคะแนนก่อน</p></div>)}
             </div>
           </div>
         )}
@@ -957,36 +1041,36 @@ const App = () => {
         {/* ══════════ WEEKLY ══════════ */}
         {activeTab==='weekly' && (
           <div className="space-y-5">
-            <h2 className="text-xs font-bold" style={{color:'rgba(255,255,255,0.4)'}}>WEEKLY STUDY PLAN — คลิกเพื่อเพิ่ม/ลบวิชา</h2>
+            <h2 className="text-xs font-bold" style={{color:'var(--text-muted)'}}>WEEKLY STUDY PLAN — คลิกเพื่อเพิ่ม/ลบวิชา</h2>
             <div className="grid grid-cols-7 gap-2">
               {DAY_KEYS.map((day,di)=>(
-                <div key={day} className="glass rounded-2xl p-3 min-h-48" style={{border:'1px solid rgba(255,255,255,0.07)'}}>
-                  <p className="text-xs font-black text-center mb-3" style={{color:'rgba(255,255,255,0.5)'}}>{DAYS[di]}</p>
+                <div key={day} className="glass rounded-2xl p-3 min-h-48" style={{border:'1px solid var(--card-border)'}}>
+                  <p className="text-xs font-black text-center mb-3" style={{color:'var(--text-muted)'}}>{DAYS[di]}</p>
                   <div className="space-y-1.5">
-                    {subjects.map(sub=>{const col=SUB_COLORS[sub.id]||SUB_COLORS.soc;const active=(weeklyPlan[day]||[]).includes(sub.id);return(<button key={sub.id} onClick={()=>toggleWeeklySubject(day,sub.id)} className="day-btn w-full rounded-lg px-1.5 py-1 text-[10px] font-bold text-left leading-tight transition-all" style={active?{background:`linear-gradient(135deg,${col.from},${col.to})`,color:'white',border:'none'}:{background:'rgba(255,255,255,0.04)',color:'rgba(255,255,255,0.3)',border:'1px solid rgba(255,255,255,0.06)'}}>{sub.name.split(' ')[0]}</button>);})}
+                    {subjects.map(sub=>{const col=SUB_COLORS[sub.id]||SUB_COLORS.soc;const active=(weeklyPlan[day]||[]).includes(sub.id);return(<button key={sub.id} onClick={()=>toggleWeeklySubject(day,sub.id)} className="day-btn w-full rounded-lg px-1.5 py-1 text-[10px] font-bold text-left leading-tight transition-all" style={active?{background:`linear-gradient(135deg,${col.from},${col.to})`,color:'white',border:'none'}:{background:'var(--day-inactive)',color:'var(--text-dim)',border:'1px solid var(--card-border)'}}>{sub.name.split(' ')[0]}</button>);})}
                   </div>
                 </div>
               ))}
             </div>
             <div className="glass rounded-2xl p-4">
-              <p className="text-xs font-bold mb-3" style={{color:'rgba(255,255,255,0.4)'}}>สรุปภาระงานรายวิชาต่อสัปดาห์</p>
+              <p className="text-xs font-bold mb-3" style={{color:'var(--text-muted)'}}>สรุปภาระงานรายวิชาต่อสัปดาห์</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {subjects.map(sub=>{const col=SUB_COLORS[sub.id]||SUB_COLORS.soc;const days=DAY_KEYS.filter(d=>(weeklyPlan[d]||[]).includes(sub.id));return(<div key={sub.id} className="rounded-xl p-3" style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)'}}><p className="text-xs font-bold text-white mb-1">{sub.name}</p><p className="text-lg font-black" style={{color:days.length?col.from:'rgba(255,255,255,0.2)'}}>{days.length} <span className="text-xs font-normal" style={{color:'rgba(255,255,255,0.4)'}}>วัน/สัปดาห์</span></p><p className="text-[10px] mt-1" style={{color:'rgba(255,255,255,0.3)'}}>{days.map(d=>DAYS[DAY_KEYS.indexOf(d)]).join(' ')||'ยังไม่ได้วางแผน'}</p></div>);})}
+                {subjects.map(sub=>{const col=SUB_COLORS[sub.id]||SUB_COLORS.soc;const days=DAY_KEYS.filter(d=>(weeklyPlan[d]||[]).includes(sub.id));return(<div key={sub.id} className="rounded-xl p-3" style={{background:'var(--row-bg)',border:'1px solid var(--row-border)'}}><p className="text-xs font-bold mb-1" style={{color:'var(--text)'}}>{sub.name}</p><p className="text-lg font-black" style={{color:days.length?col.from:'var(--text-faint)'}}>{days.length} <span className="text-xs font-normal" style={{color:'var(--text-muted)'}}>วัน/สัปดาห์</span></p><p className="text-[10px] mt-1" style={{color:'var(--text-dim)'}}>{days.map(d=>DAYS[DAY_KEYS.indexOf(d)]).join(' ')||'ยังไม่ได้วางแผน'}</p></div>);})}
               </div>
             </div>
           </div>
         )}
 
-        {/* ══════════ ROADMAP (ใหม่) ══════════ */}
+        {/* ══════════ ROADMAP ══════════ */}
         {activeTab==='roadmap' && <RoadmapTab isAdmin={isAdmin} />}
 
         {/* ══════════ LOGS ══════════ */}
         {activeTab==='logs' && (
           <div className="space-y-3">
-            <h2 className="text-xs font-bold" style={{color:'rgba(255,255,255,0.4)'}}>ACTIVITY LOG</h2>
+            <h2 className="text-xs font-bold" style={{color:'var(--text-muted)'}}>ACTIVITY LOG</h2>
             <div className="space-y-2">
-              {logs.map((log,i)=>(<div key={i} className="glass rounded-xl px-4 py-3 flex justify-between items-center" style={{border:'1px solid rgba(255,255,255,0.06)'}}><div><span className="text-xs font-bold" style={{color:'#a78bfa'}}>{log.user}</span><span className="text-xs ml-2" style={{color:'rgba(255,255,255,0.6)'}}>{log.action}</span></div><span className="text-xs shrink-0 ml-4" style={{color:'rgba(255,255,255,0.3)'}}>{new Date(log.time).toLocaleTimeString('th-TH')}</span></div>))}
-              {!logs.length&&<div className="text-center py-16 text-sm" style={{color:'rgba(255,255,255,0.3)'}}>ยังไม่มีกิจกรรม</div>}
+              {logs.map((log,i)=>(<div key={i} className="glass rounded-xl px-4 py-3 flex justify-between items-center" style={{border:'1px solid var(--card-border)'}}><div><span className="text-xs font-bold" style={{color:'#a78bfa'}}>{log.user}</span><span className="text-xs ml-2" style={{color:'var(--text-muted)'}}>{log.action}</span></div><span className="text-xs shrink-0 ml-4" style={{color:'var(--text-dim)'}}>{new Date(log.time).toLocaleTimeString('th-TH')}</span></div>))}
+              {!logs.length&&<div className="text-center py-16 text-sm" style={{color:'var(--text-dim)'}}>ยังไม่มีกิจกรรม</div>}
             </div>
           </div>
         )}
